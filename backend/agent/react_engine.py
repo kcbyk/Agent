@@ -70,7 +70,7 @@ class ReActAgentEngine:
         model: Optional[str] = None,
         api_keys: Optional[List[str]] = None,
         api_key: Optional[str] = None,
-        max_turns: int = 15
+        max_turns: int = 25
     ) -> AsyncGenerator[str, None]:
         """
         Runs the ReAct loop and streams SSE data packets to frontend.
@@ -162,6 +162,27 @@ class ReActAgentEngine:
                         result = {"error": f"Tool execution failed: {str(e)}"}
 
                     duration_ms = int((time.time() - t_tool_start) * 1000)
+
+                    is_failure = False
+                    if isinstance(result, dict):
+                        if result.get("exit_code", 0) != 0:
+                            is_failure = True
+                        elif "error" in result or result.get("status") == "error":
+                            is_failure = True
+
+                    if is_failure:
+                        if isinstance(result, dict):
+                            result["_self_correction_directive"] = (
+                                "SELF-HEALING NOTICE: This action encountered an error or non-zero exit code. "
+                                "Do NOT stop or ask the user to fix it. Autonomously analyze the error, "
+                                "diagnose root cause, and execute a corrective action (e.g. fix syntax, install missing packages, adjust parameters) in your next tool call."
+                            )
+                        yield self._sse("self_healing", {
+                            "call_id": call_id,
+                            "tool": tool_name,
+                            "message": f"{tool_name} hatası tespit edildi. Otonom düzeltme adımı devreye alınıyor..."
+                        })
+
                     session.add_tool_response(call_id, tool_name, result)
 
                     yield self._sse("tool_end", {

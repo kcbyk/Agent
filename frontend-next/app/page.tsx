@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Send, Square, Sparkles } from "lucide-react";
+import { Send, Square, Sparkles, ChevronDown } from "lucide-react";
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
 import WorkspaceSheet, { WorkspaceItem, ProcessItem } from "@/components/WorkspaceSheet";
@@ -44,9 +44,12 @@ export default function Home() {
   // Data
   const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>([]);
   const [processes, setProcesses] = useState<ProcessItem[]>([]);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const [selfHealingNotice, setSelfHealingNotice] = useState<string | null>(null);
 
   const activeEventSourceRef = useRef<EventSource | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   // Initialize
   useEffect(() => {
@@ -63,8 +66,28 @@ export default function Home() {
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
+  const handleChatScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    setShowScrollBottom(distanceFromBottom > 120);
+  };
+
+  const scrollToBottom = (smooth = true) => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTo({
+        top: chatContainerRef.current.scrollHeight,
+        behavior: smooth ? "smooth" : "auto",
+      });
+    } else {
+      messagesEndRef.current?.scrollIntoView({ behavior: smooth ? "smooth" : "auto" });
+    }
+  };
+
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (!showScrollBottom) {
+      scrollToBottom(true);
+    }
   }, [messages, isGenerating]);
 
   const loadWorkspace = async () => {
@@ -107,6 +130,11 @@ export default function Home() {
       { id: userMsgId, role: "user", text: trimmed },
       { id: assistantMsgId, role: "assistant", text: "", tools: [] },
     ]);
+
+    // Immediately scroll down smoothly so previous conversation scrolls up
+    setTimeout(() => {
+      scrollToBottom(true);
+    }, 50);
 
     setIsGenerating(true);
 
@@ -164,6 +192,14 @@ export default function Home() {
       } catch (err) {}
     });
 
+    es.addEventListener("self_healing", (e: any) => {
+      try {
+        const d = JSON.parse(e.data);
+        setSelfHealingNotice(d.message || "Hata tespit edildi, otomatik düzeltiliyor...");
+        setTimeout(() => setSelfHealingNotice(null), 5000);
+      } catch (err) {}
+    });
+
     es.addEventListener("done", () => {
       es.close();
       activeEventSourceRef.current = null;
@@ -216,7 +252,11 @@ export default function Home() {
       />
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto space-y-6 pb-36 flex flex-col justify-start">
+      <div
+        ref={chatContainerRef}
+        onScroll={handleChatScroll}
+        className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto space-y-6 pb-36 flex flex-col justify-start"
+      >
         {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center px-4 my-auto select-none animate-in fade-in duration-300 py-10">
             {/* Sparkle Icon */}
@@ -404,6 +444,26 @@ export default function Home() {
 
         <div ref={messagesEndRef} />
       </div>
+
+      {/* Floating Center Scroll to Bottom Arrow Button */}
+      {showScrollBottom && (
+        <button
+          onClick={() => scrollToBottom(true)}
+          className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#1c1c20]/95 hover:bg-[#25252a] border border-[#3c3c43] text-white shadow-2xl backdrop-blur-md text-xs font-semibold transition-all animate-in fade-in slide-in-from-bottom-2 duration-150 hover:scale-105 select-none cursor-pointer group"
+          title="Alta Kaydır"
+        >
+          <ChevronDown className="w-4 h-4 text-emerald-400 group-hover:translate-y-0.5 transition-transform" />
+          <span className="text-zinc-200">Aşağı Kaydır</span>
+        </button>
+      )}
+
+      {/* Floating Self-Healing Alert Banner */}
+      {selfHealingNotice && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-mono shadow-2xl backdrop-blur-md animate-in fade-in slide-in-from-top-2">
+          <span className="animate-spin text-sm">🔄</span>
+          <span>{selfHealingNotice}</span>
+        </div>
+      )}
 
       {/* Input Box Footer */}
       <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[#121214] via-[#121214]/90 to-transparent z-20 flex justify-center">
