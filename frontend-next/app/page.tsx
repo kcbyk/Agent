@@ -52,15 +52,6 @@ export default function Home() {
     setSessionId("arena_" + Math.random().toString(36).substring(2, 9));
     loadWorkspace();
 
-    // Initial greeting
-    setMessages([
-      {
-        id: "msg_init",
-        role: "assistant",
-        text: "👋 Merhaba! OpenArena Agent OS hazır.\n\nTerminali (`bash`), dosya ve kod üretimini (`write_file`), yüksek hızlı MP3 indirmeyi (`download_music`) ve canlı sunucu süreçlerini yönetebilirim. Ne yapmak istersiniz?",
-      },
-    ]);
-
     // Handle ESC and browser back button
     const handlePopState = () => {
       setStudioPath(null);
@@ -99,7 +90,11 @@ export default function Home() {
   };
 
   const handleSend = () => {
-    const trimmed = input.trim();
+    executeSend(input);
+  };
+
+  const executeSend = (textToSend: string) => {
+    const trimmed = textToSend.trim();
     if (!trimmed || isGenerating) return;
 
     setInput("");
@@ -220,104 +215,158 @@ export default function Home() {
       />
 
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto space-y-6 pb-36">
-        {messages.map((msg) => (
-          <div key={msg.id} className="space-y-2">
-            {msg.role === "user" ? (
-              <div className="flex justify-end">
-                <div className="bg-[#27272a] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm leading-relaxed shadow">
-                  {msg.text}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-xs text-zinc-400">
-                  <span className="font-semibold text-zinc-200">OpenArena Agent</span>
-                  <span>•</span>
-                  <span className="text-emerald-400 font-mono text-[11px]">Gemini 3.5</span>
-                </div>
+      <div className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto space-y-6 pb-36 flex flex-col justify-start">
+        {messages.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center px-4 my-auto select-none animate-in fade-in duration-300 py-10">
+            {/* Sparkle Icon */}
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500/20 via-teal-500/20 to-sky-500/20 border border-emerald-500/30 flex items-center justify-center mb-5 shadow-lg shadow-emerald-500/10">
+              <span className="text-3xl">✨</span>
+            </div>
 
-                {/* Tool Cards */}
-                {msg.tools && msg.tools.length > 0 && (
-                  <div className="space-y-2">
-                    {msg.tools.map((t) => {
-                      if (t.tool === "bash") {
-                        return (
-                          <TerminalCard
-                            key={t.callId}
-                            command={t.args?.command || ""}
-                            output={t.result?.stdout || t.result?.stderr || ""}
-                            exitCode={t.result?.exit_code}
-                            isLive={!t.isDone}
-                          />
-                        );
-                      } else if (t.tool === "write_file" || t.tool === "edit_file") {
-                        return (
-                          <FileWriteCard
-                            key={t.callId}
-                            path={t.args?.path || ""}
-                            content={t.args?.content || t.args?.new_text || ""}
-                            onOpenStudio={openStudio}
-                          />
-                        );
-                      } else if (t.tool === "download_music" && t.result?.status === "success") {
-                        return (
-                          <MusicCard
-                            key={t.callId}
-                            title={t.result.title}
-                            filename={t.result.filename}
-                            channel={t.result.channel}
-                            duration={t.result.duration}
-                            sizeHuman={t.result.size_human}
-                            coverUrl={t.result.cover_url}
-                            previewUrl={t.result.preview_url}
-                            downloadUrl={t.result.download_url}
-                            onOpenStudio={openStudio}
-                          />
-                        );
-                      } else if (t.tool === "download_file" && t.result?.status === "success") {
-                        return (
-                          <MediaDownloadCard
-                            key={t.callId}
-                            filename={t.result.filename}
-                            sizeHuman={t.result.size_human}
-                            isImage={t.result.is_image}
-                            previewUrl={t.result.preview_url}
-                            downloadUrl={t.result.download_url}
-                            onOpenStudio={openStudio}
-                          />
-                        );
-                      } else {
-                        return (
-                          <div
-                            key={t.callId}
-                            className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 text-xs font-mono text-zinc-400"
-                          >
-                            <div className="flex items-center gap-2 font-semibold text-purple-400 mb-1">
-                              <span>⚙️</span>
-                              <span>{t.tool}</span>
-                              {!t.isDone && <span className="text-amber-400">⏳</span>}
-                            </div>
-                            <pre className="text-[11px] overflow-auto max-h-40">
-                              {JSON.stringify(t.result || t.args, null, 2)}
-                            </pre>
-                          </div>
-                        );
-                      }
-                    })}
-                  </div>
-                )}
+            {/* Big Welcome Title */}
+            <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-zinc-100 to-zinc-400 bg-clip-text text-transparent mb-3">
+              Hoş Geldiniz
+            </h1>
 
-                {/* Assistant Text */}
-                {msg.text && (
-                  <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-4 text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap shadow-sm">
+            {/* Subtitle */}
+            <p className="text-xs sm:text-sm text-zinc-400 max-w-md leading-relaxed mb-8">
+              OpenArena Agent OS ile otonom kod yazabilir, web siteleri üretebilir, terminali yönetebilir ve 320kbps MP3 veya dosya indirebilirsiniz.
+            </p>
+
+            {/* Quick Suggestion Chips */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-lg">
+              <button
+                onClick={() => executeSend("Bana modern ve canlı bir portfolyo web sitesi oluştur")}
+                className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181b] hover:bg-[#202024] border border-[#27272a] hover:border-zinc-600 text-left transition-all text-xs text-zinc-300 hover:text-white group"
+              >
+                <span className="text-base group-hover:scale-110 transition-transform">🌐</span>
+                <span className="truncate">Modern portfolyo web sitesi oluştur</span>
+              </button>
+
+              <button
+                onClick={() => executeSend("Bana Tarkan Kuzu Kuzu MP3 indir")}
+                className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181b] hover:bg-[#202024] border border-[#27272a] hover:border-zinc-600 text-left transition-all text-xs text-zinc-300 hover:text-white group"
+              >
+                <span className="text-base group-hover:scale-110 transition-transform">🎵</span>
+                <span className="truncate">Tarkan Kuzu Kuzu MP3 indir</span>
+              </button>
+
+              <button
+                onClick={() => executeSend("İnternetten sevimli bir yavru kedi fotoğrafı bul ve indir")}
+                className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181b] hover:bg-[#202024] border border-[#27272a] hover:border-zinc-600 text-left transition-all text-xs text-zinc-300 hover:text-white group"
+              >
+                <span className="text-base group-hover:scale-110 transition-transform">🖼️</span>
+                <span className="truncate">Sevimli kedi fotoğrafı bul ve indir</span>
+              </button>
+
+              <button
+                onClick={() => executeSend("Python ile bash terminalinde uptime ve disk durumunu göster")}
+                className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181b] hover:bg-[#202024] border border-[#27272a] hover:border-zinc-600 text-left transition-all text-xs text-zinc-300 hover:text-white group"
+              >
+                <span className="text-base group-hover:scale-110 transition-transform">⚡</span>
+                <span className="truncate">Terminalde sistem durumunu göster</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          messages.map((msg) => (
+            <div key={msg.id} className="space-y-2">
+              {msg.role === "user" ? (
+                <div className="flex justify-end">
+                  <div className="bg-[#27272a] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm leading-relaxed shadow">
                     {msg.text}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs text-zinc-400">
+                    <span className="font-semibold text-zinc-200">OpenArena Agent</span>
+                    <span>•</span>
+                    <span className="text-emerald-400 font-mono text-[11px]">Gemini 3.5</span>
+                  </div>
+
+                  {/* Tool Cards */}
+                  {msg.tools && msg.tools.length > 0 && (
+                    <div className="space-y-2">
+                      {msg.tools.map((t) => {
+                        if (t.tool === "bash") {
+                          return (
+                            <TerminalCard
+                              key={t.callId}
+                              command={t.args?.command || ""}
+                              output={t.result?.stdout || t.result?.stderr || ""}
+                              exitCode={t.result?.exit_code}
+                              isLive={!t.isDone}
+                            />
+                          );
+                        } else if (t.tool === "write_file" || t.tool === "edit_file") {
+                          return (
+                            <FileWriteCard
+                              key={t.callId}
+                              path={t.args?.path || ""}
+                              content={t.args?.content || t.args?.new_text || ""}
+                              onOpenStudio={openStudio}
+                            />
+                          );
+                        } else if (t.tool === "download_music" && t.result?.status === "success") {
+                          return (
+                            <MusicCard
+                              key={t.callId}
+                              title={t.result.title}
+                              filename={t.result.filename}
+                              channel={t.result.channel}
+                              duration={t.result.duration}
+                              sizeHuman={t.result.size_human}
+                              coverUrl={t.result.cover_url}
+                              previewUrl={t.result.preview_url}
+                              downloadUrl={t.result.download_url}
+                              onOpenStudio={openStudio}
+                            />
+                          );
+                        } else if (t.tool === "download_file" && t.result?.status === "success") {
+                          return (
+                            <MediaDownloadCard
+                              key={t.callId}
+                              filename={t.result.filename}
+                              sizeHuman={t.result.size_human}
+                              isImage={t.result.is_image}
+                              previewUrl={t.result.preview_url}
+                              downloadUrl={t.result.download_url}
+                              onOpenStudio={openStudio}
+                            />
+                          );
+                        } else {
+                          return (
+                            <div
+                              key={t.callId}
+                              className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 text-xs font-mono text-zinc-400"
+                            >
+                              <div className="flex items-center gap-2 font-semibold text-purple-400 mb-1">
+                                <span>⚙️</span>
+                                <span>{t.tool}</span>
+                                {!t.isDone && <span className="text-amber-400">⏳</span>}
+                              </div>
+                              <pre className="text-[11px] overflow-auto max-h-40">
+                                {JSON.stringify(t.result || t.args, null, 2)}
+                              </pre>
+                            </div>
+                          );
+                        }
+                      })}
+                    </div>
+                  )}
+
+                  {/* Assistant Text */}
+                  {msg.text && (
+                    <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-4 text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap shadow-sm">
+                      {msg.text}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))
+        )}
 
         <div ref={messagesEndRef} />
       </div>

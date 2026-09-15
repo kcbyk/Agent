@@ -113,6 +113,27 @@
             background: rgba(255, 255, 255, 0.08);
         }
 
+        .suggestion-chip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #18181b;
+            border: 1px solid #27272a;
+            color: #d4d4d8;
+            font-size: 12px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .suggestion-chip:hover {
+            background: #202024;
+            border-color: #52525b;
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+
         #messages-container {
             flex: 1;
             overflow-y: auto;
@@ -671,17 +692,34 @@
 
     <!-- CHAT MESSAGES STREAM -->
     <div id="messages-container">
-        <div class="msg-assistant">
-            <div class="assistant-header">
-                <span style="font-weight: 600; color: #f3f4f6;">OpenArena Agent</span>
-                <span>•</span>
-                <span style="color: #4ade80; font-family: monospace; font-size: 11px;">Gemini ReAct OS Hazır ✓</span>
+        <div id="welcome-hero" style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 40px 16px; margin: auto 0; user-select: none;">
+            <div style="width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, rgba(74, 222, 128, 0.15), rgba(56, 189, 248, 0.15)); border: 1px solid rgba(74, 222, 128, 0.3); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; box-shadow: 0 8px 24px rgba(74, 222, 128, 0.12);">
+                <span style="font-size: 30px;">✨</span>
             </div>
-            <div class="markdown-body">👋 <b>Merhaba!</b> OpenArena Agent OS aktif ve hazır.
-
-Terminali (`bash`), dosya yönetimini (`write_file`, `edit_file`) ve sunucu süreçlerini (`start_process`) doğrudan yönetebiliyorum. Kod yazarken dosyaların içeriğini chat içinde canlı kartlar halinde görebilir, terminal komutlarını izleyebilir ve istediğiniz an durdurabilirsiniz.
-
-Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto takip landing page'i yap ve canlıya aç"</i>).</div>
+            <h1 style="font-size: 34px; font-weight: 800; letter-spacing: -0.5px; background: linear-gradient(to right, #ffffff, #e4e4e7, #a1a1aa); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0 0 10px 0;">
+                Hoş Geldiniz
+            </h1>
+            <p style="font-size: 13.5px; color: #a1a1aa; max-width: 460px; line-height: 1.55; margin: 0 0 28px 0;">
+                OpenArena Agent OS ile otonom kod yazabilir, web siteleri üretebilir, terminali yönetebilir ve 320kbps MP3 veya dosya indirebilirsiniz.
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; width: 100%; max-width: 500px;">
+                <button class="suggestion-chip" onclick="executeSuggestion('Bana modern ve canlı bir portfolyo web sitesi oluştur')">
+                    <span style="font-size: 16px;">🌐</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Modern portfolyo web sitesi oluştur</span>
+                </button>
+                <button class="suggestion-chip" onclick="executeSuggestion('Bana Tarkan Kuzu Kuzu MP3 indir')">
+                    <span style="font-size: 16px;">🎵</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Tarkan Kuzu Kuzu MP3 indir</span>
+                </button>
+                <button class="suggestion-chip" onclick="executeSuggestion('İnternetten sevimli bir yavru kedi fotoğrafı bul ve indir')">
+                    <span style="font-size: 16px;">🖼️</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Sevimli kedi fotoğrafı bul ve indir</span>
+                </button>
+                <button class="suggestion-chip" onclick="executeSuggestion('Python ile bash terminalinde uptime ve disk durumunu göster')">
+                    <span style="font-size: 16px;">⚡</span>
+                    <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Terminalde sistem durumunu göster</span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -1574,10 +1612,20 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
             scrollToBottom();
         }
 
+        function executeSuggestion(text) {
+            const input = document.getElementById("user-input");
+            if (input) input.value = text;
+            handleSendMessage();
+        }
+
         function handleSendMessage() {
             const input = document.getElementById("user-input");
             const text = input ? input.value.trim() : "";
             if (!text) return;
+
+            // Remove welcome hero as soon as user messages
+            const hero = document.getElementById("welcome-hero");
+            if (hero) hero.remove();
 
             input.value = "";
             appendUserMessage(text);
