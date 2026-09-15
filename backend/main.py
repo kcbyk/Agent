@@ -88,6 +88,31 @@ async def stop_process_api(request: Request):
 async def get_process_output_api(process_id: str = Query(...), tail_lines: int = 100):
     return process_manager.get_output(process_id=process_id, tail_lines=tail_lines)
 
+@app.api_route("/api/chat/stop", methods=["GET", "POST", "OPTIONS"])
+@app.api_route("/api/chat/stop/", methods=["GET", "POST", "OPTIONS"])
+async def stop_chat_endpoint(request: Request):
+    if request.method == "OPTIONS":
+        return Response(status_code=200, headers={"Access-Control-Allow-Origin": "*"})
+
+    session_id = request.query_params.get("session_id", "default")
+    if request.method == "POST":
+        try:
+            body = await request.body()
+            if body:
+                d = json.loads(body.decode("utf-8"))
+                session_id = d.get("session_id", session_id)
+        except Exception:
+            pass
+
+    if session_id:
+        agent_engine.cancel_session(session_id)
+
+    return JSONResponse({
+        "status": "ok",
+        "message": "Oturum başarıyla durduruldu.",
+        "session_id": session_id
+    }, headers={"Access-Control-Allow-Origin": "*"})
+
 # Robust Sync Endpoint with Transparent Error Reporting
 @app.api_route("/api/chat/sync", methods=["GET", "POST", "OPTIONS", "HEAD"])
 @app.api_route("/api/chat/sync/", methods=["GET", "POST", "OPTIONS", "HEAD"])

@@ -3,12 +3,28 @@ from pathlib import Path
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent
+
+# Auto-load .env if present
+env_paths = [BASE_DIR.parent / ".env", BASE_DIR / ".env", Path.cwd() / ".env"]
+for ep in env_paths:
+    if ep.exists():
+        with open(ep, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, v = line.split("=", 1)
+                    k, v = k.strip(), v.strip().strip("'").strip('"')
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+        break
+
 if os.getenv("VERCEL"):
     WORKSPACE_DIR = Path("/tmp/workspace")
 else:
     WORKSPACE_DIR = BASE_DIR / "workspace"
 
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
+
 
 class Settings(BaseModel):
     provider: str = os.getenv("DEFAULT_PROVIDER", "gemini")

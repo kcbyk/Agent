@@ -10,6 +10,7 @@ class ConversationSession:
     def __init__(self, session_id: str, workspace_dir: Path):
         self.session_id = session_id
         self.workspace_dir = workspace_dir
+        self.cancelled = False
         self.messages: List[Dict[str, Any]] = [
             {"role": "system", "content": SYSTEM_PROMPT}
         ]
@@ -57,6 +58,10 @@ class ReActAgentEngine:
             self.sessions[session_id] = ConversationSession(session_id, self.workspace_dir)
         return self.sessions[session_id]
 
+    def cancel_session(self, session_id: str):
+        if session_id in self.sessions:
+            self.sessions[session_id].cancelled = True
+
     async def run_loop(
         self,
         session_id: str,
@@ -71,12 +76,17 @@ class ReActAgentEngine:
         Runs the ReAct loop and streams SSE data packets to frontend.
         """
         session = self.get_or_create_session(session_id)
+        session.cancelled = False
         session.add_user_message(user_message)
 
         yield self._sse("session_status", {"status": "started", "session_id": session_id})
 
         turn = 0
         while turn < max_turns:
+            if session.cancelled:
+                yield self._sse("cancelled", {"session_id": session_id, "turn": turn})
+                break
+
             turn += 1
             has_tool_calls = False
             accumulated_content = ""
@@ -114,6 +124,10 @@ class ReActAgentEngine:
                 )
 
                 for tc in current_tool_calls:
+                    if session.cancelled:
+                        yield self._sse("cancelled", {"session_id": session_id, "turn": turn})
+                        return
+
                     call_id = tc["id"]
                     tool_name = tc["name"]
                     arguments = tc["arguments"]
