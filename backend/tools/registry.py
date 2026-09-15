@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 from .file_tools import read_file, write_file, edit_file, list_directory
 from .bash_tools import run_bash
 from .process_tools import process_manager
-from .web_tools import web_search, fetch_page, search_images, download_file
+from .web_tools import web_search, fetch_page, search_images, download_file, search_music, download_music
 
 TOOL_DEFINITIONS = [
     {
@@ -138,6 +138,48 @@ TOOL_DEFINITIONS = [
                     "max_results": {
                         "type": "integer",
                         "description": "Number of results to return (default 5)."
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "download_music",
+            "description": "Search and download any song, track, or music as high-quality 320kbps MP3 audio directly into the workspace from YouTube, SoundCloud, or Archive.org. The user can play it directly in chat or download the MP3 file to their device.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Song name, artist, or music title to search and download (e.g. 'Tarkan Kuzu Kuzu', 'Barış Manço Dönence', 'Coldplay Yellow')."
+                    },
+                    "filename": {
+                        "type": "string",
+                        "description": "Optional custom filename to save inside workspace (e.g. 'song.mp3'). If omitted, will be generated from song title."
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_music",
+            "description": "Search across YouTube, SoundCloud, and Archive.org for songs and tracks, returning titles, artists, duration, and cover art.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Song title or artist query."
+                    },
+                    "limit": {
+                        "type": "integer",
+                        "description": "Maximum number of results to return (default 5)."
                     }
                 },
                 "required": ["query"]
@@ -329,6 +371,17 @@ def execute_tool(name: str, arguments: Dict[str, Any], workspace_dir: Path) -> D
                 path=arguments.get("path", "."),
                 recursive=bool(arguments.get("recursive", False)),
                 base_dir=workspace_dir
+            )
+        elif name == "download_music":
+            return download_music(
+                query=arguments.get("query", ""),
+                filename=arguments.get("filename"),
+                base_dir=workspace_dir
+            )
+        elif name == "search_music":
+            return search_music(
+                query=arguments.get("query", ""),
+                limit=int(arguments.get("limit", 5))
             )
         elif name == "download_file":
             return download_file(

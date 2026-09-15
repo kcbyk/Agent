@@ -36,6 +36,9 @@ class Settings(BaseModel):
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
 
+    mp3_api_key: str = os.getenv("MP3_API_KEY", "sk-71c69f4de1f4b912957fed45")
+    mp3_api_base_url: str = os.getenv("MP3_API_BASE_URL", "https://mp3-apisi.onrender.com")
+
     workspace_dir: Path = WORKSPACE_DIR
     max_tool_iterations: int = 25
     bash_timeout_default: int = 60

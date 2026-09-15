@@ -866,6 +866,21 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
         <div id="viewer-pane-image" style="flex: 1; display: none; align-items: center; justify-content: center; background: #09090b; padding: 20px;">
             <img id="viewer-image-tag" src="" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
         </div>
+
+        <!-- PANEL 5: SES / MP3 ÇALAR -->
+        <div id="viewer-pane-audio" style="flex: 1; display: none; align-items: center; justify-content: center; background: #09090b; padding: 24px;">
+            <div style="background: #18181b; border: 1px solid #27272a; border-radius: 16px; padding: 32px 24px; width: 100%; max-width: 440px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);">
+                <div style="font-size: 52px; margin-bottom: 16px;">🎵</div>
+                <div id="viewer-audio-title" style="font-size: 16px; font-weight: 600; color: #ffffff; margin-bottom: 6px; word-break: break-all;">Şarkı Başlığı</div>
+                <div id="viewer-audio-info" style="font-size: 12px; color: #a1a1aa; margin-bottom: 20px;">MP3 Ses Dosyası • 320 kbps</div>
+                <audio id="viewer-audio-element" controls style="width: 100%; margin-bottom: 18px; outline: none;"></audio>
+                <div style="display: flex; justify-content: center; gap: 8px;">
+                    <a id="viewer-audio-dl-btn" href="#" download="" class="tool-action-btn" style="background: #ec4899; color: #fff; font-weight: 600; border-color: #f472b6; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; font-size: 13px;">
+                        <span>📥</span> Cihazına İndir
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- MAIN INTERACTIVE ENGINE -->
@@ -983,6 +998,8 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                     return '<span style="color:#94a3b8; font-size:14px;">📄</span>';
                 case 'png': case 'jpg': case 'jpeg': case 'svg': case 'webp':
                     return '<span style="color:#ec4899; font-size:14px;">🖼️</span>';
+                case 'mp3': case 'wav': case 'ogg': case 'm4a':
+                    return '<span style="color:#ec4899; font-size:14px;">🎵</span>';
                 default:
                     return '<span style="color:#94a3b8; font-size:14px;">📄</span>';
             }
@@ -1027,6 +1044,7 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
             var isHtml = (ext === 'html' || ext === 'htm');
             var isMarkdown = (ext === 'md');
             var isImage = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ext);
+            var isAudio = ['mp3', 'wav', 'ogg', 'm4a'].includes(ext);
 
             // Configure tabs display
             const tabsContainer = document.getElementById("viewer-tabs-container");
@@ -1047,15 +1065,12 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                 tabPreview.innerHTML = "<span>👁️</span> Önizleme";
                 tabCode.innerHTML = "<span>📝</span> Kaynak Kod";
                 vpToggle.style.display = "none";
-            } else if (isImage) {
-                tabsContainer.style.display = "none";
-                vpToggle.style.display = "none";
             } else {
                 tabsContainer.style.display = "none";
                 vpToggle.style.display = "none";
             }
 
-            var chosenTab = targetTab || (isHtml ? "preview" : (isMarkdown ? "preview" : (isImage ? "image" : "code")));
+            var chosenTab = targetTab || (isHtml ? "preview" : (isMarkdown ? "preview" : (isImage ? "image" : (isAudio ? "audio" : "code"))));
 
             // Fetch file content
             fetch("/api/workspace/file?path=" + encodeURIComponent(path))
@@ -1064,7 +1079,7 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                     var content = d.content || "";
                     AppState.cachedFileContent = content;
 
-                    sizeEl.textContent = formatBytes(content.length);
+                    sizeEl.textContent = formatBytes(d.size || content.length);
 
                     const codeArea = document.getElementById("viewer-code-textarea");
                     codeArea.value = content;
@@ -1090,6 +1105,20 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                         document.getElementById("viewer-image-tag").src = "/workspace-preview/" + encodeURIComponent(path);
                     }
 
+                    // If Audio
+                    if (isAudio) {
+                        var audioEl = document.getElementById("viewer-audio-element");
+                        var audioPreviewUrl = "/workspace-preview/" + encodeURIComponent(path);
+                        if (audioEl) audioEl.src = audioPreviewUrl;
+                        var audioTitle = document.getElementById("viewer-audio-title");
+                        if (audioTitle) audioTitle.textContent = path.split('/').pop();
+                        var audioDl = document.getElementById("viewer-audio-dl-btn");
+                        if (audioDl) {
+                            audioDl.href = "/api/workspace/download?path=" + encodeURIComponent(path);
+                            audioDl.setAttribute("download", path.split('/').pop());
+                        }
+                    }
+
                     switchViewerTab(chosenTab);
                     modal.style.display = "flex";
                 })
@@ -1105,6 +1134,7 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
             const paneCode = document.getElementById("viewer-pane-code");
             const paneMd = document.getElementById("viewer-pane-markdown");
             const paneImg = document.getElementById("viewer-pane-image");
+            const paneAudio = document.getElementById("viewer-pane-audio");
 
             const tabBtnPreview = document.getElementById("tab-btn-preview");
             const tabBtnCode = document.getElementById("tab-btn-code");
@@ -1115,12 +1145,39 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
             paneCode.style.display = "none";
             paneMd.style.display = "none";
             paneImg.style.display = "none";
+            if (paneAudio) paneAudio.style.display = "none";
 
             tabBtnPreview.classList.remove("active");
             tabBtnCode.classList.remove("active");
             btnSave.style.display = "none";
 
             var ext = (AppState.activeViewerPath || "").split('.').pop().toLowerCase();
+            var isHtml = (ext === 'html' || ext === 'htm');
+            var isMarkdown = (ext === 'md');
+
+            if (tabName === "preview") {
+                tabBtnPreview.classList.add("active");
+                if (isMarkdown) {
+                    paneMd.style.display = "block";
+                    vpToggle.style.display = "none";
+                } else {
+                    panePreview.style.display = "flex";
+                    if (isHtml) vpToggle.style.display = "inline-flex";
+                }
+            } else if (tabName === "code") {
+                tabBtnCode.classList.add("active");
+                paneCode.style.display = "flex";
+                btnSave.style.display = "inline-flex";
+                vpToggle.style.display = "none";
+                updateEditorLineNumbers();
+            } else if (tabName === "image") {
+                paneImg.style.display = "flex";
+                vpToggle.style.display = "none";
+            } else if (tabName === "audio") {
+                if (paneAudio) paneAudio.style.display = "flex";
+                vpToggle.style.display = "none";
+            }
+        }
             var isHtml = (ext === 'html' || ext === 'htm');
             var isMarkdown = (ext === 'md');
 
@@ -1649,6 +1706,42 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                                 <div style="font-size:12px; color:#a1a1aa;" id="msg-${callId}">Dış kaynaktan indiriliyor ve workspace'e kaydediliyor...</div>
                             </div>
                         `;
+                    } else if (tool === "download_music") {
+                        var q = args.query || "";
+                        card.innerHTML = `
+                            <div class="tool-card-header" onclick="toggleCardBody('${callId}')">
+                                <div class="tool-title">
+                                    <span style="font-size:16px;">🎵</span>
+                                    <span style="font-weight:600; color:#ec4899; font-size:13px;">MP3 İndirme</span>
+                                    <span style="color:#f472b6; font-size:11px; font-family:monospace; background:rgba(236,72,153,0.12); padding:1px 6px; border-radius:4px;">"${escapeHtml(q)}"</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="tool-pill running" id="pill-${callId}">⏳ 320kbps MP3 Çevriliyor...</span>
+                                    <span class="chevron" id="chev-${callId}">⌄</span>
+                                </div>
+                            </div>
+                            <div id="body-${callId}" style="padding:12px; background:#18181b; border-top:1px solid #27272a;">
+                                <div style="font-size:12px; color:#a1a1aa;" id="msg-${callId}">YouTube/SoundCloud üzerinden aranıyor ve 320kbps MP3'e dönüştürülüyor...</div>
+                            </div>
+                        `;
+                    } else if (tool === "search_music") {
+                        var q = args.query || "";
+                        card.innerHTML = `
+                            <div class="tool-card-header" onclick="toggleCardBody('${callId}')">
+                                <div class="tool-title">
+                                    <span style="font-size:16px;">🎶</span>
+                                    <span style="font-weight:600; color:#a855f7; font-size:13px;">Müzik Arama</span>
+                                    <span style="color:#c084fc; font-size:11px; font-family:monospace; background:rgba(168,85,247,0.12); padding:1px 6px; border-radius:4px;">"${escapeHtml(q)}"</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="tool-pill running" id="pill-${callId}">⏳ Aranıyor...</span>
+                                    <span class="chevron" id="chev-${callId}">⌄</span>
+                                </div>
+                            </div>
+                            <div id="body-${callId}" style="padding:10px 14px; background:#18181b; border-top:1px solid #27272a;">
+                                <div style="font-size:12px; color:#a1a1aa;">Şarkılar listeleniyor...</div>
+                            </div>
+                        `;
                     } else if (tool === "search_images") {
                         var q = args.query || "";
                         card.innerHTML = `
@@ -1796,6 +1889,81 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                             }
                             if (body) {
                                 body.innerHTML = `<div style="color:#ef4444; font-size:12px;">İndirme hatası: ${escapeHtml(res.error || "Bilinmeyen hata")}</div>`;
+                            }
+                        }
+                    } else if (tool === "download_music") {
+                        if (res.status === "success") {
+                            if (pill) {
+                                pill.textContent = "✓ MP3 İndirildi (" + (res.size_human || "") + ")";
+                                pill.className = "tool-pill success";
+                            }
+                            if (body) {
+                                var targetPath = res.path || res.filename;
+                                var dlPath = encodeURIComponent(targetPath);
+                                var dlUrl = "/api/workspace/download?path=" + dlPath;
+                                var previewUrl = "/workspace-preview/" + dlPath;
+
+                                body.innerHTML = `
+                                    <div style="background:#111113; border:1px solid #27272a; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:12px;">
+                                        <div style="display:flex; gap:12px; align-items:center;">
+                                            ${res.cover_url ? `
+                                                <img src="${escapeHtml(res.cover_url)}" style="width:56px; height:56px; border-radius:8px; object-fit:cover; border:1px solid #27272a;" onerror="this.style.display='none'">
+                                            ` : `
+                                                <div style="width:56px; height:56px; border-radius:8px; background:#27272a; display:flex; align-items:center; justify-content:center; font-size:24px;">🎵</div>
+                                            `}
+                                            <div style="flex:1; overflow:hidden;">
+                                                <div style="font-weight:600; color:#ffffff; font-size:13.5px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(res.title || res.filename)}</div>
+                                                <div style="font-size:11.5px; color:#a1a1aa; display:flex; gap:8px; margin-top:2px;">
+                                                    ${res.channel ? `<span>${escapeHtml(res.channel)}</span> • ` : ''}
+                                                    <span style="color:#ec4899; font-weight:500;">320 kbps MP3</span> •
+                                                    <span style="color:#38bdf8;">${res.size_human || ''}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <audio controls src="${previewUrl}" style="width:100%; height:38px; border-radius:6px; outline:none;"></audio>
+                                        </div>
+                                        <div style="display:flex; justify-content:flex-end; gap:8px;">
+                                            <button class="tool-action-btn" onclick="openFileViewer('${escapeHtml(targetPath)}', 'audio')">
+                                                🔍 Oynatıcıda Aç
+                                            </button>
+                                            <a href="${dlUrl}" download="${escapeHtml(res.filename)}" class="tool-action-btn" style="background:#ec4899; color:#fff; font-weight:600; border-color:#f472b6; text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:6px 14px;">
+                                                <span>📥</span> Cihazına İndir (MP3)
+                                            </a>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                            if (typeof loadWorkspaceFilesTree === "function") loadWorkspaceFilesTree();
+                        } else {
+                            if (pill) {
+                                pill.textContent = "✗ Hata";
+                                pill.className = "tool-pill error";
+                            }
+                            if (body) {
+                                body.innerHTML = `<div style="color:#ef4444; font-size:12px;">MP3 indirme hatası: ${escapeHtml(res.error || "Bilinmeyen hata")}</div>`;
+                            }
+                        }
+                    } else if (tool === "search_music") {
+                        if (pill) pill.textContent = "✓ " + (res.total_results || 0) + " Şarkı";
+                        if (body) {
+                            var tracks = res.tracks || [];
+                            if (tracks.length > 0) {
+                                var musicHtml = `<div style="display:flex; flex-direction:column; gap:6px; margin-top:4px;">`;
+                                tracks.slice(0, 4).forEach(function(t) {
+                                    musicHtml += `
+                                        <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:#09090b; border:1px solid #27272a; border-radius:6px;">
+                                            <div style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; color:#f4f4f5; flex:1;">
+                                                🎵 ${escapeHtml(t.baslik || "")}
+                                            </div>
+                                            <span style="font-size:11px; color:#71717a; margin-left:8px;">${escapeHtml(t.sure || "")}</span>
+                                        </div>
+                                    `;
+                                });
+                                musicHtml += `</div>`;
+                                body.innerHTML = musicHtml;
+                            } else {
+                                body.innerHTML = `<div style="color:#71717a; font-size:12px;">Şarkı bulunamadı.</div>`;
                             }
                         }
                     } else if (tool === "search_images") {

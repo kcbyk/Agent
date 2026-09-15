@@ -211,3 +211,154 @@ def download_file(url: str, filename: Optional[str] = None, base_dir: Optional[P
             "url": url,
             "error": f"Download failed: {str(e)}"
         }
+
+def search_music(query: str, limit: int = 5) -> Dict[str, Any]:
+    """Search for songs across YouTube, SoundCloud, and Archive.org using Mp3 API."""
+    try:
+        from ..config import settings
+        key = settings.mp3_api_key or "sk-71c69f4de1f4b912957fed45"
+        base_url = (settings.mp3_api_base_url or "https://mp3-apisi.onrender.com").rstrip("/")
+        
+        with httpx.Client(timeout=15.0) as client:
+            resp = client.get(f"{base_url}/api/v1/search", params={"q": query, "limit": limit, "key": key})
+            if resp.status_code == 200:
+                data = resp.json()
+                return {
+                    "query": query,
+                    "total_results": len(data.get("sonuclar", [])),
+                    "tracks": data.get("sonuclar", [])
+                }
+            else:
+                return {
+                    "query": query,
+                    "total_results": 0,
+                    "error": f"Search failed with code {resp.status_code}: {resp.text}"
+                }
+    except Exception as e:
+        return {
+            "query": query,
+            "total_results": 0,
+            "error": f"Music search failed: {str(e)}"
+        }
+
+def download_music(query: str, filename: Optional[str] = None, base_dir: Optional[Path] = None) -> Dict[str, Any]:
+    """Search and download high-quality MP3 (320kbps) audio directly into workspace."""
+    try:
+        import time
+        from urllib.parse import quote
+        from ..config import settings
+        
+        key = settings.mp3_api_key or "sk-71c69f4de1f4b912957fed45"
+        base_url = (settings.mp3_api_base_url or "https://mp3-apisi.onrender.com").rstrip("/")
+        
+        if base_dir is None:
+            base_dir = settings.workspace_dir
+            
+        base_dir = Path(base_dir).resolve()
+        base_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 1. Start instant search & conversion
+        with httpx.Client(timeout=25.0) as client:
+            init_resp = client.get(f"{base_url}/api/v1/instant", params={"q": query, "key": key})
+            if init_resp.status_code != 200:
+                return {
+                    "status": "error",
+                    "query": query,
+                    "error": f"Failed to initiate music download: {init_resp.text}"
+                }
+                
+            init_data = init_resp.json()
+            if not init_data.get("ok"):
+                return {
+                    "status": "error",
+                    "query": query,
+                    "error": init_data.get("hata", "Bilinmeyen API hatası")
+                }
+                
+            job_id = init_data.get("job_id")
+            secilen = init_data.get("secilen") or {}
+            song_title = secilen.get("baslik") or query
+            channel = secilen.get("kanal", "")
+            cover_url = secilen.get("kapak", "")
+            duration = secilen.get("sure", "")
+            
+            # 2. Poll until conversion is complete (up to 45 seconds)
+            max_wait = 45
+            start_t = time.time()
+            dosya_url = None
+            
+            while time.time() - start_t < max_wait:
+                status_resp = client.get(f"{base_url}/api/v1/status/{job_id}", params={"key": key})
+                if status_resp.status_code == 200:
+                    st_data = status_resp.json()
+                    durum = st_data.get("durum")
+                    if durum == "bitti":
+                        dosya_url = st_data.get("dosya_url")
+                        break
+                    elif durum == "hata":
+                        return {
+                            "status": "error",
+                            "query": query,
+                            "error": st_data.get("hata", "Dönüştürme başarısız")
+                        }
+                time.sleep(2)
+                
+            if not dosya_url:
+                return {
+                    "status": "error",
+                    "query": query,
+                    "error": "MP3 dönüştürme zaman aşımına uğradı. Lütfen tekrar deneyin."
+                }
+                
+            # 3. Download the MP3 file to workspace
+            clean_name = filename
+            if not clean_name:
+                clean_name = song_title
+            if not clean_name.lower().endswith(".mp3"):
+                clean_name += ".mp3"
+                
+            clean_name = re.sub(r'[\\/:"*?<>|]', '_', clean_name)
+            dest_path = (base_dir / clean_name).resolve()
+            if not str(dest_path).startswith(str(base_dir)):
+                dest_path = base_dir / Path(clean_name).name
+                
+            # Download stream
+            full_file_url = base_url + dosya_url
+            with client.stream("GET", full_file_url, params={"key": key}, follow_redirects=True, timeout=60.0) as stream_resp:
+                if stream_resp.status_code >= 400:
+                    return {
+                        "status": "error",
+                        "error": f"MP3 stream hatası ({stream_resp.status_code})"
+                    }
+                total_bytes = 0
+                with open(dest_path, "wb") as f:
+                    for chunk in stream_resp.iter_bytes(chunk_size=32768):
+                        if chunk:
+                            f.write(chunk)
+                            total_bytes += len(chunk)
+                            
+            rel_path = dest_path.relative_to(base_dir).as_posix()
+            
+            return {
+                "status": "success",
+                "title": song_title,
+                "filename": clean_name,
+                "path": rel_path,
+                "size_bytes": total_bytes,
+                "size_human": _format_size(total_bytes),
+                "channel": channel,
+                "cover_url": cover_url,
+                "duration": duration,
+                "is_audio": True,
+                "download_url": f"/api/workspace/download?path={rel_path}",
+                "preview_url": f"/workspace-preview/{rel_path}",
+                "message": f"'{song_title}' başarıyla MP3 olarak indirildi ({_format_size(total_bytes)})."
+            }
+            
+    except Exception as e:
+        return {
+            "status": "error",
+            "query": query,
+            "error": f"MP3 indirme hatası: {str(e)}"
+        }
+
