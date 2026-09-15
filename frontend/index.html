@@ -729,6 +729,13 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                 <span id="ws-files-count" style="font-size: 11px; background: #27272a; color: #a1a1aa; padding: 2px 7px; border-radius: 10px;"></span>
             </div>
             <div style="display: flex; align-items: center; gap: 6px;">
+                <a href="/api/workspace/download-zip" download="workspace.zip" class="header-btn" style="color: #a855f7; background: rgba(168,85,247,0.12); border: 1px solid rgba(168,85,247,0.25); text-decoration: none; font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Tüm projeyi .ZIP olarak indir">
+                    <span>📦</span> ZIP İndir
+                </a>
+                <button class="header-btn" onclick="triggerWorkspaceUpload()" style="color: #38bdf8; background: rgba(56,189,248,0.12); border: 1px solid rgba(56,189,248,0.25); font-size: 11px; font-weight: 500; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;" title="Cihazından dosya yükle">
+                    <span>📤</span> Yükle
+                </button>
+                <input type="file" id="workspace-upload-input" onchange="handleWorkspaceUpload(event)" style="display: none;" multiple>
                 <button class="header-btn" onclick="loadWorkspaceFilesTree()" title="Yenile">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -808,6 +815,9 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                     </button>
                 </div>
 
+                <a id="viewer-download-btn" href="#" download="" class="header-btn" title="Cihaza İndir" style="text-decoration:none; color:#38bdf8; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.3); font-size:12px; font-weight:600; padding:4px 10px; display:inline-flex; align-items:center; gap:5px; border-radius:6px;">
+                    <span>📥</span> İndir
+                </a>
                 <button id="btn-save-code" class="header-btn" style="background: var(--color-indigo); color: #ffffff; padding: 6px 14px; font-weight: 500; display: none;" onclick="saveViewerFile()">
                     <span>💾</span> Kaydet
                 </button>
@@ -1003,9 +1013,15 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
             const nameEl = document.getElementById("viewer-file-name");
             const sizeEl = document.getElementById("viewer-file-size");
             const extLink = document.getElementById("viewer-open-external");
+            const dlBtn = document.getElementById("viewer-download-btn");
 
             nameEl.textContent = path;
             iconEl.innerHTML = getFileIcon(path);
+
+            if (dlBtn) {
+                dlBtn.href = "/api/workspace/download?path=" + encodeURIComponent(path);
+                dlBtn.setAttribute("download", path.split('/').pop());
+            }
 
             var ext = path.split('.').pop().toLowerCase();
             var isHtml = (ext === 'html' || ext === 'htm');
@@ -1311,6 +1327,9 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                                 <div style="display:flex; align-items:center; gap:6px;">
                                     ${isHtml ? `<button class="header-btn" style="color:#4ade80; font-size:11px; padding:3px 8px; background:rgba(74,222,128,0.1); border-radius:6px;" onclick="openFileViewer('${escapeHtml(item.path)}', 'preview')">🌐 Canlı Aç</button>` : ''}
                                     <button class="header-btn" style="color:#a1a1aa; font-size:11px; padding:3px 8px; background:#27272a; border-radius:6px;" onclick="openFileViewer('${escapeHtml(item.path)}', 'code')">✏️ Düzenle</button>
+                                    <a href="/api/workspace/download?path=${encodeURIComponent(item.path)}" download="${escapeHtml(item.name)}" class="header-btn" style="color:#38bdf8; font-size:11px; padding:3px 8px; background:rgba(56,189,248,0.12); border:1px solid rgba(56,189,248,0.25); border-radius:6px; text-decoration:none; display:inline-flex; align-items:center; gap:3px;" title="Cihaza İndir">
+                                        <span>📥</span> İndir
+                                    </a>
                                 </div>
                             </div>
                         `;
@@ -1328,6 +1347,47 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                 body: JSON.stringify({ process_id: processId })
             }).then(function() {
                 loadWorkspaceFilesTree();
+            });
+        }
+
+        function triggerWorkspaceUpload() {
+            var fileInput = document.getElementById("workspace-upload-input");
+            if (fileInput) fileInput.click();
+        }
+
+        function handleWorkspaceUpload(event) {
+            var files = event.target.files;
+            if (!files || files.length === 0) return;
+
+            var uploadCount = files.length;
+            var uploaded = 0;
+            var badge = document.getElementById("ws-files-count");
+            if (badge) badge.textContent = "Yükleniyor (0/" + uploadCount + ")...";
+
+            Array.from(files).forEach(function(file) {
+                var formData = new FormData();
+                formData.append("file", file);
+
+                fetch("/api/workspace/upload", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(res) {
+                    uploaded++;
+                    if (badge) badge.textContent = "Yükleniyor (" + uploaded + "/" + uploadCount + ")...";
+                    if (uploaded >= uploadCount) {
+                        event.target.value = "";
+                        loadWorkspaceFilesTree();
+                    }
+                })
+                .catch(function(err) {
+                    uploaded++;
+                    if (uploaded >= uploadCount) {
+                        event.target.value = "";
+                        loadWorkspaceFilesTree();
+                    }
+                });
             });
         }
 
@@ -1560,10 +1620,51 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                                 <div style="padding:8px 12px; background:#18181b; border-top:1px solid #27272a; display:flex; gap:8px; justify-content:space-between; align-items:center; flex-wrap:wrap;">
                                     <span style="font-size:12px; color:#a1a1aa;" id="msg-${callId}">Dosya yazılıyor...</span>
                                     <div style="display:flex; gap:6px;">
+                                        <a href="/api/workspace/download?path=${encodeURIComponent(filePath)}" download="${escapeHtml(filePath)}" class="tool-action-btn" style="text-decoration:none; display:inline-flex; align-items:center; gap:4px; color:#38bdf8; border-color:rgba(56,189,248,0.3);">📥 İndir</a>
                                         <button class="tool-action-btn" onclick="openFileViewer('${escapeHtml(filePath)}', 'code')">✏️ Stüdyoda Aç</button>
                                         ${isHtml ? `<button class="tool-action-btn" style="color:#4ade80; border-color:#22c55e; background:rgba(34,197,94,0.1);" onclick="openFileViewer('${escapeHtml(filePath)}', 'preview')">🌐 Canlı Önizle</button>` : ''}
                                     </div>
                                 </div>
+                            </div>
+                        `;
+                    } else if (tool === "download_file") {
+                        var url = args.url || "";
+                        var filename = args.filename || url.split('/').pop().split('?')[0] || "dosya";
+                        card.innerHTML = `
+                            <div class="tool-card-header" onclick="toggleCardBody('${callId}')">
+                                <div class="tool-title">
+                                    <span style="font-size:16px;">📥</span>
+                                    <span style="font-weight:600; color:#38bdf8; font-family:monospace; font-size:13px;">${escapeHtml(filename)}</span>
+                                    <span style="color:#0ea5e9; font-size:10.5px; font-family:monospace; background:rgba(14,165,233,0.12); border:1px solid rgba(14,165,233,0.3); padding:1px 6px; border-radius:4px;">download</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="tool-pill running" id="pill-${callId}">⏳ İndiriliyor...</span>
+                                    <span class="chevron" id="chev-${callId}">⌄</span>
+                                </div>
+                            </div>
+                            <div id="body-${callId}" style="padding:12px; background:#18181b; border-top:1px solid #27272a;">
+                                <div style="font-size:11.5px; color:#71717a; font-family:monospace; word-break:break-all; margin-bottom:8px;">
+                                    ${escapeHtml(url)}
+                                </div>
+                                <div style="font-size:12px; color:#a1a1aa;" id="msg-${callId}">Dış kaynaktan indiriliyor ve workspace'e kaydediliyor...</div>
+                            </div>
+                        `;
+                    } else if (tool === "search_images") {
+                        var q = args.query || "";
+                        card.innerHTML = `
+                            <div class="tool-card-header" onclick="toggleCardBody('${callId}')">
+                                <div class="tool-title">
+                                    <span style="font-size:16px;">🖼️</span>
+                                    <span style="font-weight:600; color:#ec4899; font-size:13px;">Görsel Arama</span>
+                                    <span style="color:#f472b6; font-size:11px; font-family:monospace; background:rgba(236,72,153,0.12); padding:1px 6px; border-radius:4px;">"${escapeHtml(q)}"</span>
+                                </div>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="tool-pill running" id="pill-${callId}">⏳ Aranıyor...</span>
+                                    <span class="chevron" id="chev-${callId}">⌄</span>
+                                </div>
+                            </div>
+                            <div id="body-${callId}" style="padding:10px 14px; background:#18181b; border-top:1px solid #27272a;">
+                                <div style="font-size:12px; color:#a1a1aa;">Uygun görseller taranıyor...</div>
                             </div>
                         `;
                     } else if (tool === "start_process") {
@@ -1647,6 +1748,74 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto 
                         if (pill) {
                             var bytesStr = formatBytes(res.bytes_written || (res.content ? res.content.length : 0));
                             pill.textContent = "✓ Yazıldı (" + bytesStr + ")";
+                        }
+                    } else if (tool === "download_file") {
+                        if (res.status === "success") {
+                            if (pill) {
+                                pill.textContent = "✓ İndirildi (" + (res.size_human || "") + ")";
+                                pill.className = "tool-pill success";
+                            }
+                            if (body) {
+                                var isImg = res.is_image || false;
+                                var targetPath = res.path || res.filename;
+                                var dlPath = encodeURIComponent(targetPath);
+                                var dlUrl = "/api/workspace/download?path=" + dlPath;
+                                var previewUrl = "/workspace-preview/" + dlPath;
+
+                                body.innerHTML = `
+                                    <div style="display:flex; flex-direction:column; gap:10px;">
+                                        ${isImg ? `
+                                            <div style="text-align:center; background:#09090b; border:1px solid #27272a; border-radius:8px; overflow:hidden; max-height:260px; display:flex; align-items:center; justify-content:center; padding:6px;">
+                                                <img src="${previewUrl}" alt="${escapeHtml(res.filename)}" style="max-width:100%; max-height:240px; object-fit:contain; border-radius:6px;" onerror="this.style.display='none'" />
+                                            </div>
+                                        ` : ''}
+                                        <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px;">
+                                            <div style="display:flex; align-items:center; gap:8px;">
+                                                <span style="font-size:20px;">${isImg ? '🖼️' : '📁'}</span>
+                                                <div>
+                                                    <div style="font-weight:600; color:#f4f4f5; font-size:13px; font-family:monospace;">${escapeHtml(res.filename)}</div>
+                                                    <div style="font-size:11px; color:#71717a;">Boyut: <strong style="color:#38bdf8;">${res.size_human}</strong> • Workspace'e kaydedildi ✓</div>
+                                                </div>
+                                            </div>
+                                            <div style="display:flex; gap:6px;">
+                                                <a href="${dlUrl}" download="${escapeHtml(res.filename)}" class="tool-action-btn" style="background:#0284c7; color:#fff; font-weight:600; border-color:#38bdf8; text-decoration:none; display:inline-flex; align-items:center; gap:4px; padding:6px 12px;">
+                                                    <span>📥</span> Cihazına İndir
+                                                </a>
+                                                <button class="tool-action-btn" onclick="openFileViewer('${escapeHtml(targetPath)}', '${isImg ? 'image' : 'code'}')">
+                                                    🔍 Önizle
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                            }
+                        } else {
+                            if (pill) {
+                                pill.textContent = "✗ Hata";
+                                pill.className = "tool-pill error";
+                            }
+                            if (body) {
+                                body.innerHTML = `<div style="color:#ef4444; font-size:12px;">İndirme hatası: ${escapeHtml(res.error || "Bilinmeyen hata")}</div>`;
+                            }
+                        }
+                    } else if (tool === "search_images") {
+                        if (pill) pill.textContent = "✓ " + (res.total_results || 0) + " Görsel";
+                        if (body) {
+                            var items = res.results || [];
+                            if (items.length > 0) {
+                                var imgHtml = `<div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(100px, 1fr)); gap:6px; margin-top:4px;">`;
+                                items.slice(0, 4).forEach(function(img) {
+                                    imgHtml += `
+                                        <div style="background:#09090b; border:1px solid #27272a; border-radius:6px; overflow:hidden; aspect-ratio:4/3; cursor:pointer;" onclick="window.open('${escapeHtml(img.image || img.url)}', '_blank')">
+                                            <img src="${escapeHtml(img.thumbnail || img.image)}" alt="" style="width:100%; height:100%; object-fit:cover;" onerror="this.parentElement.style.display='none'">
+                                        </div>
+                                    `;
+                                });
+                                imgHtml += `</div>`;
+                                body.innerHTML = imgHtml;
+                            } else {
+                                body.innerHTML = `<div style="color:#71717a; font-size:12px;">Görsel bulunamadı.</div>`;
+                            }
                         }
                     } else if (tool === "start_process") {
                         if (body) {

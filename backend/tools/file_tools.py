@@ -29,6 +29,20 @@ def read_file(path: str, offset: int = 0, limit: Optional[int] = None, base_dir:
             return {"error": f"File not found: {path}"}
         if resolved.is_dir():
             return {"error": f"Path is a directory, not a file: {path}"}
+
+        binary_exts = {".jpg", ".jpeg", ".png", ".gif", ".webp", ".ico", ".svg", ".bmp", ".pdf", ".zip", ".tar", ".gz", ".mp3", ".mp4", ".wav", ".bin"}
+        suffix = resolved.suffix.lower()
+        if suffix in binary_exts and suffix != ".svg":
+            file_size = resolved.stat().st_size
+            return {
+                "path": str(resolved.relative_to(base_dir)),
+                "is_binary": True,
+                "size": file_size,
+                "total_lines": 1,
+                "offset": 0,
+                "lines_read": 1,
+                "content": f"[İkili dosya: {resolved.name} - {file_size} bayt]"
+            }
             
         with open(resolved, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()

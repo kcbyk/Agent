@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 from .file_tools import read_file, write_file, edit_file, list_directory
 from .bash_tools import run_bash
 from .process_tools import process_manager
-from .web_tools import web_search, fetch_page
+from .web_tools import web_search, fetch_page, search_images, download_file
 
 TOOL_DEFINITIONS = [
     {
@@ -138,6 +138,48 @@ TOOL_DEFINITIONS = [
                     "max_results": {
                         "type": "integer",
                         "description": "Number of results to return (default 5)."
+                    }
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "download_file",
+            "description": "Download any file, photo, image, PDF, audio, zip archive, dataset, or document from a web URL and save it directly into the workspace so the user can inspect or download it to their device.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "url": {
+                        "type": "string",
+                        "description": "The full HTTP or HTTPS URL of the file or image to download."
+                    },
+                    "filename": {
+                        "type": "string",
+                        "description": "Optional custom filename to save inside workspace (e.g. 'picture.jpg', 'dataset.csv'). If omitted, will be inferred from the URL."
+                    }
+                },
+                "required": ["url"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_images",
+            "description": "Search the web for photos, wallpapers, icons, and illustrations using DuckDuckGo. Returns direct image URLs, thumbnails, and dimensions.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Image search query (e.g. 'cute cat', 'futuristic city skyline', 'python logo png')."
+                    },
+                    "max_results": {
+                        "type": "integer",
+                        "description": "Maximum number of image results to return (default 5)."
                     }
                 },
                 "required": ["query"]
@@ -287,6 +329,17 @@ def execute_tool(name: str, arguments: Dict[str, Any], workspace_dir: Path) -> D
                 path=arguments.get("path", "."),
                 recursive=bool(arguments.get("recursive", False)),
                 base_dir=workspace_dir
+            )
+        elif name == "download_file":
+            return download_file(
+                url=arguments.get("url", ""),
+                filename=arguments.get("filename"),
+                base_dir=workspace_dir
+            )
+        elif name == "search_images":
+            return search_images(
+                query=arguments.get("query", ""),
+                max_results=int(arguments.get("max_results", 5))
             )
         elif name == "web_search":
             return web_search(

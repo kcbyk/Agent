@@ -2,7 +2,7 @@ import os
 import json
 import traceback
 from pathlib import Path
-from fastapi import FastAPI, Request, Response, HTTPException, Query
+from fastapi import FastAPI, Request, Response, HTTPException, Query, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -35,7 +35,7 @@ if FRONTEND_DIR.exists():
 if WORKSPACE_DIR.exists():
     app.mount("/workspace-preview", StaticFiles(directory=str(WORKSPACE_DIR), html=True), name="workspace-preview")
 
-@app.get("/")
+@app.api_route("/", methods=["GET", "HEAD"])
 async def root():
     index_file = FRONTEND_DIR / "index.html"
     if index_file.exists():
@@ -63,6 +63,90 @@ async def get_workspace_files(recursive: bool = True):
 @app.get("/api/workspace/file")
 async def get_workspace_file(path: str = Query(...)):
     return read_file(path=path, base_dir=WORKSPACE_DIR)
+
+@app.get("/api/workspace/download")
+async def download_workspace_file(path: str = Query(...)):
+    try:
+        clean_path = path.lstrip("/\\")
+        target = (WORKSPACE_DIR / clean_path).resolve()
+        base_resolved = WORKSPACE_DIR.resolve()
+        if not str(target).startswith(str(base_resolved)) or not target.is_file():
+            raise HTTPException(status_code=404, detail="Dosya bulunamadı veya erişim engellendi.")
+        
+        import mimetypes
+        content_type, _ = mimetypes.guess_type(str(target))
+        return FileResponse(
+            path=str(target),
+            media_type=content_type or "application/octet-stream",
+            filename=target.name,
+            headers={
+                "Content-Disposition": f'attachment; filename="{target.name}"',
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Expose-Headers": "Content-Disposition"
+            }
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/workspace/download-zip")
+async def download_workspace_zip():
+    try:
+        import io
+        import zipfile
+        
+        zip_buffer = io.BytesIO()
+        base_resolved = WORKSPACE_DIR.resolve()
+        
+        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
+            for root, dirs, files in os.walk(base_resolved):
+                # Filter out hidden or build dirs
+                dirs[:] = [d for d in dirs if not d.startswith(".") and d not in ["__pycache__", "node_modules", ".git"]]
+                for f in files:
+                    if f.startswith(".gitkeep"):
+                        continue
+                    full_p = Path(root) / f
+                    arcname = full_p.relative_to(base_resolved).as_posix()
+                    zip_file.write(full_p, arcname=arcname)
+                    
+        zip_buffer.seek(0)
+        return Response(
+            content=zip_buffer.getvalue(),
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": 'attachment; filename="workspace.zip"',
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Expose-Headers": "Content-Disposition"
+            }
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Zip oluşturma hatası: {str(e)}")
+
+@app.post("/api/workspace/upload")
+async def upload_workspace_file(file: UploadFile = File(...), path: Optional[str] = None):
+    try:
+        import re
+        filename = path or file.filename or "uploaded_file"
+        clean_name = re.sub(r'[\\/:"*?<>|]', '_', Path(filename).name)
+        target = (WORKSPACE_DIR / clean_name).resolve()
+        base_resolved = WORKSPACE_DIR.resolve()
+        if not str(target).startswith(str(base_resolved)):
+            target = base_resolved / clean_name
+
+        content = await file.read()
+        with open(target, "wb") as f:
+            f.write(content)
+
+        return {
+            "status": "success",
+            "filename": target.name,
+            "path": target.name,
+            "bytes_written": len(content),
+            "message": f"'{target.name}' başarıyla workspace'e yüklendi ({len(content)} bayt)."
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/workspace/file")
 async def save_workspace_file(request: Request):
