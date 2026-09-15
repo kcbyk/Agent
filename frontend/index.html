@@ -2089,6 +2089,15 @@
             });
 
             es.addEventListener("error", function(e) {
+                try {
+                    if (e.data) {
+                        var d = JSON.parse(e.data);
+                        if (d.error) {
+                            replyBox.style.display = "block";
+                            replyBox.innerHTML += `<div style="color: #ef4444; font-size: 12px; margin-top: 8px;">⚠️ ${escapeHtml(d.error)}</div>`;
+                        }
+                    }
+                } catch(_) {}
                 es.close();
                 AppState.activeEventSource = null;
                 setGeneratingState(false);

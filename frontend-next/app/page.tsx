@@ -214,7 +214,20 @@ export default function Home() {
       loadWorkspace();
     });
 
-    es.addEventListener("error", () => {
+    es.addEventListener("error", (e: any) => {
+      try {
+        if (e.data) {
+          const d = JSON.parse(e.data);
+          if (d.error) {
+            setMessages((prev) =>
+              prev.map((m) => {
+                if (m.id !== assistantMsgId) return m;
+                return { ...m, text: m.text ? m.text + `\n\n⚠️ ${d.error}` : `⚠️ ${d.error}` };
+              })
+            );
+          }
+        }
+      } catch (_) {}
       es.close();
       activeEventSourceRef.current = null;
       setIsGenerating(false);
