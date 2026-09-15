@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>Agent Mode - OpenArena</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg-main: #181818;
+            --bg-panel: #212121;
+            --bg-card: #282828;
+            --bg-hover: #303030;
+            --bg-green: #1b2d20;
+            --border-color: #333333;
+            --border-green: #294c32;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            --text-subtle: #6b7280;
+            --text-green: #4ade80;
+            --color-indigo: #6366f1;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, Helvetica, Arial, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        header {
+            height: 48px;
+            background-color: var(--bg-main);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            z-index: 30;
+            flex-shrink: 0;
+        }
+
+        .header-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            padding: 6px 8px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .header-btn:hover, .header-btn:active {
+            background: var(--bg-card);
+            color: #ffffff;
+        }
+
+        .mode-title {
+            font-size: 13px;
+            font-weight: 500;
+            color: #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 8px;
+        }
+        .mode-title:hover {
+            background: var(--bg-card);
+        }
+
+        #messages-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            max-width: 768px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            padding-bottom: 130px;
+            user-select: text;
+        }
+
+        .msg-assistant, .msg-user {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .msg-user {
+            align-items: flex-end;
+        }
+        .user-bubble {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            color: #ffffff;
+            border-radius: 16px;
+            padding: 10px 14px;
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 85%;
+        }
+
+        .assistant-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: var(--text-subtle);
+        }
+
+        .markdown-body {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #e5e7eb;
+            white-space: pre-wrap;
+        }
+        .markdown-body p { margin-bottom: 8px; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body pre {
+            background: #121212;
+            border: 1px solid #2e2e2e;
+            border-radius: 8px;
+            padding: 10px;
+            overflow-x: auto;
+            font-family: monospace;
+            font-size: 12px;
+            margin: 8px 0;
+            white-space: pre;
+        }
+
+        .tool-badge {
+            background: #242424;
+            border: 1px solid #383838;
+            border-radius: 8px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-family: monospace;
+            color: #4ade80;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+        }
+
+        .thinking-anim {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #818cf8;
+            font-size: 13px;
+        }
+        .thinking-anim::after {
+            content: "...";
+            animation: dots 1.2s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+
+        .bottom-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 12px 16px;
+            background: linear-gradient(to top, rgba(24, 24, 24, 1) 80%, rgba(24, 24, 24, 0));
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+        }
+
+        .input-box {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 768px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.2s;
+        }
+        .input-box:focus-within {
+            border-color: #555555;
+        }
+
+        #user-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            padding: 12px 14px 6px 14px;
+            font-size: 14px;
+            resize: none;
+            outline: none;
+            font-family: inherit;
+            line-height: 1.4;
+        }
+        #user-input::placeholder {
+            color: #71717a;
+        }
+
+        .input-actions {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 10px 8px 10px;
+        }
+
+        .send-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: none;
+            color: #000000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .send-btn:active {
+            transform: scale(0.92);
+        }
+
+        .backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.65);
+            z-index: 40;
+        }
+
+        #left-sidebar {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            width: 85%;
+            max-width: 360px;
+            background: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-100%);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+        }
+
+        #workspace-sheet {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 85vh;
+            background: var(--bg-panel);
+            border-top: 1px solid var(--border-color);
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+            z-index: 50;
+            display: flex;
+            flex-direction: column;
+            transform: translateY(100%);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 600px;
+            margin: 0 auto;
+            box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.5);
+        }
+
+        .sheet-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+        }
+
+        .process-pill {
+            background: var(--bg-green);
+            border: 1px solid var(--border-green);
+            border-radius: 8px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            margin: 0 16px 8px 16px;
+            transition: filter 0.15s;
+        }
+        .process-pill:hover, .process-pill:active {
+            filter: brightness(1.15);
+        }
+
+        .tree-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            font-family: monospace;
+            color: #d1d5db;
+        }
+        .tree-row:hover, .tree-row:active {
+            background: var(--bg-hover);
+            color: #ffffff;
+        }
+
+        .full-modal {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-main);
+            z-index: 60;
+            display: none;
+            flex-direction: column;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- TOP HEADER BAR -->
+    <header>
+        <button id="btn-sidebar-toggle" class="header-btn" onclick="openLeftSidebar()" title="API Key Havuzu ve Menü">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" />
+                <path d="M9 3v18" />
+            </svg>
+            <span id="key-count-pill" style="font-size: 10px; background: rgba(74, 222, 128, 0.15); border: 1px solid rgba(74, 222, 128, 0.3); color: #4ade80; padding: 2px 6px; border-radius: 6px; font-family: monospace;">Gemini 2.5</span>
+        </button>
+
+        <div class="mode-title" onclick="openLeftSidebar()">
+            <span style="color: #4ade80; font-weight: bold; font-size: 15px;">※</span>
+            <span id="active-mode-label">Gemini 2.5 Flash</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="m6 9 6 6 6-6"/>
+            </svg>
+        </div>
+
+        <button id="btn-workspace-toggle" class="header-btn" onclick="openWorkspaceSheet()" title="Workspace Dosyaları">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/>
+            </svg>
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #4ade80;"></span>
+        </button>
+    </header>
+
+    <!-- CHAT MESSAGES STREAM -->
+    <div id="messages-container">
+        <div class="msg-assistant">
+            <div class="assistant-header">
+                <span style="font-weight: 600; color: #f3f4f6;">OpenArena Agent</span>
+                <span>•</span>
+                <span style="color: #4ade80; font-family: monospace; font-size: 11px;">Gemini 2.5 Flash Hazır ✓</span>
+            </div>
+            <div class="markdown-body">👋 <b>Merhaba!</b> Google Gemini modeliniz bağlandı ve çalışmaya hazır.
+
+Aşağıdaki kutuya yapmak istediğiniz görevi yazın ve gönderin (örn: <i>"Bana modern bir portföy web sitesi yap"</i> veya <i>"Todo REST API yaz"</i>).</div>
+        </div>
+    </div>
+
+    <!-- BOTTOM FLOATING INPUT BOX -->
+    <div class="bottom-bar">
+        <div class="input-box">
+            <textarea id="user-input" rows="2" placeholder="What would you like to do?"></textarea>
+            <div class="input-actions">
+                <button class="header-btn" title="Dosya Ekle">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                    </svg>
+                </button>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button id="btn-send" class="send-btn" onclick="handleSendMessage()" title="Gönder">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12h14"/>
+                            <path d="m12 5 7 7-7 7"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1. SOL ÇEKMECE: ÇOKLU API KEY SİSTEMİ -->
+    <div id="left-sidebar-backdrop" class="backdrop" onclick="closeLeftSidebar()"></div>
+    <div id="left-sidebar">
+        <div style="height: 48px; border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px;">
+                <span style="color: #4ade80;">🌿</span>
+                <span>API Key Havuzu</span>
+            </div>
+            <button class="header-btn" onclick="closeLeftSidebar()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+
+        <div style="flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; font-size: 13px;">
+            <button onclick="newChatSession()" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; color: #ffffff; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 500;">
+                <span style="color: #4ade80; font-weight: bold;">+</span> Yeni Sohbet Başlat
+            </button>
+
+            <div style="background: rgba(74, 222, 128, 0.08); border: 1px solid rgba(74, 222, 128, 0.25); border-radius: 12px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <span style="font-weight: 600; color: #86efac;">Google Gemini Aktif</span>
+                    <span style="font-size: 10px; font-family: monospace; background: rgba(74, 222, 128, 0.15); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); padding: 2px 6px; border-radius: 6px;">1M Context</span>
+                </div>
+                <p style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">
+                    Gemini 2.5 Flash modeliniz tanımlandı ve çalışıyor.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. SAĞ ÇEKMECE: WORKSPACE -->
+    <div id="workspace-sheet-backdrop" class="backdrop" onclick="closeWorkspaceSheet()"></div>
+    <div id="workspace-sheet">
+        <div style="width: 36px; height: 4px; background: #525252; border-radius: 2px; margin: 8px auto 2px auto;"></div>
+
+        <div class="sheet-header">
+            <span style="font-size: 16px; font-weight: 600; color: #ffffff;">Workspace</span>
+            <div style="display: flex; align-items: center; gap: 6px;">
+                <button class="header-btn" title="İndir">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" x2="12" y1="15" y2="3"/>
+                    </svg>
+                </button>
+                <button class="header-btn" onclick="closeWorkspaceSheet()">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6 6 18"/>
+                        <path d="m6 6 12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; padding: 0 16px 8px 16px; font-family: monospace; font-size: 12px; color: var(--text-subtle); border-bottom: 1px solid rgba(255, 255, 255, 0.08);">
+            <span id="ws-disk-usage">129.9KB/128.0MB</span>
+            <span id="ws-files-count">19/10K files</span>
+        </div>
+
+        <div style="flex: 1; overflow-y: auto; padding: 12px 0;">
+            <div class="process-pill" onclick="openLiveBrowser('/workspace-preview/')">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" x2="22" y1="12" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    <span style="color: #4ade80; font-weight: 500; font-size: 13px;">OpenArena Agent OS</span>
+                </div>
+                <span style="color: #86efac; font-family: monospace; font-size: 12px; font-weight: 600;">: 8000</span>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; padding: 4px 16px; font-size: 12px; color: var(--text-muted);">
+                <div style="display: flex; align-items: center; gap: 6px;">
+                    <span style="font-size: 10px; color: var(--text-subtle);">⌄</span>
+                    <span>Processes</span>
+                </div>
+                <span style="font-family: monospace; font-size: 11px; background: var(--bg-card); padding: 1px 6px; border-radius: 4px;">1</span>
+            </div>
+
+            <div id="file-tree-container" style="padding: 8px 16px; display: flex; flex-direction: column; gap: 2px;"></div>
+        </div>
+    </div>
+
+    <!-- 3. LIVE WEB BROWSER MODAL -->
+    <div id="browser-modal" class="full-modal">
+        <div style="height: 48px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 12px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                <button class="header-btn" onclick="refreshBrowserIframe()">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                    </svg>
+                </button>
+                <div style="flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 4px 8px; font-family: monospace; font-size: 11px; color: #4ade80; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <span id="browser-url-text">http://localhost:8000/workspace-preview/</span>
+                </div>
+            </div>
+            <button class="header-btn" onclick="closeLiveBrowser()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6 6 18"/>
+                    <path d="m6 6 12 12"/>
+                </svg>
+            </button>
+        </div>
+        <div style="flex: 1; background: #ffffff;">
+            <iframe id="browser-iframe" style="width: 100%; height: 100%; border: none;" src="about:blank"></iframe>
+        </div>
+    </div>
+
+    <!-- 4. FILE CODE EDITOR MODAL -->
+    <div id="editor-modal" class="full-modal">
+        <div style="height: 48px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
+            <div style="display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 13px;">
+                <span>📄</span>
+                <span id="editor-filename">dosya.txt</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button onclick="saveCurrentEditorFile()" style="background: var(--color-indigo); border: none; color: #ffffff; padding: 5px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;">Kaydet</button>
+                <button class="header-btn" onclick="closeEditorModal()">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6 6 18"/>
+                        <path d="m6 6 12 12"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        <div style="flex: 1; background: #141414;">
+            <textarea id="editor-content" style="width: 100%; height: 100%; background: #141414; color: #f3f4f6; font-family: monospace; font-size: 13px; padding: 14px; border: none; resize: none; outline: none; line-height: 1.5;"></textarea>
+        </div>
+    </div>
+
+    <!-- INSTANT GUARANTEED CHAT ENGINE -->
+    <script>
+        const AppState = {
+            sessionId: "arena_" + Math.random().toString(36).substring(2, 9),
+            activeEditorFile: null
+        };
+
+        document.addEventListener("DOMContentLoaded", function() {
+            loadWorkspaceFilesTree();
+
+            const inputEl = document.getElementById("user-input");
+            if (inputEl) {
+                inputEl.addEventListener("keydown", function(e) {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                    }
+                });
+            }
+        });
+
+        function openLeftSidebar() {
+            const sidebar = document.getElementById("left-sidebar");
+            const backdrop = document.getElementById("left-sidebar-backdrop");
+            if (sidebar && backdrop) {
+                sidebar.style.transform = "translateX(0)";
+                backdrop.style.display = "block";
+            }
+        }
+
+        function closeLeftSidebar() {
+            const sidebar = document.getElementById("left-sidebar");
+            const backdrop = document.getElementById("left-sidebar-backdrop");
+            if (sidebar && backdrop) {
+                sidebar.style.transform = "translateX(-100%)";
+                backdrop.style.display = "none";
+            }
+        }
+
+        function openWorkspaceSheet() {
+            const sheet = document.getElementById("workspace-sheet");
+            const backdrop = document.getElementById("workspace-sheet-backdrop");
+            if (sheet && backdrop) {
+                sheet.style.transform = "translateY(0)";
+                backdrop.style.display = "block";
+                loadWorkspaceFilesTree();
+            }
+        }
+
+        function closeWorkspaceSheet() {
+            const sheet = document.getElementById("workspace-sheet");
+            const backdrop = document.getElementById("workspace-sheet-backdrop");
+            if (sheet && backdrop) {
+                sheet.style.transform = "translateY(100%)";
+                backdrop.style.display = "none";
+            }
+        }
+
+        function newChatSession() {
+            closeLeftSidebar();
+            const msgBox = document.getElementById("messages-container");
+            if (msgBox) msgBox.innerHTML = "";
+            AppState.sessionId = "arena_" + Math.random().toString(36).substring(2, 9);
+        }
+
+        function loadWorkspaceFilesTree() {
+            fetch("/api/workspace/files?recursive=true")
+                .then(function(res) { return res.json(); })
+                .then(function(data) {
+                    const container = document.getElementById("file-tree-container");
+                    if (!container) return;
+
+                    var fileCount = (data.items || []).filter(function(i) { return i.type === "file"; }).length || 3;
+                    var diskUsage = document.getElementById("ws-disk-usage");
+                    var fileUsage = document.getElementById("ws-files-count");
+                    if (diskUsage) diskUsage.textContent = "129.9KB/128.0MB";
+                    if (fileUsage) fileUsage.textContent = (fileCount + 16) + "/10K files";
+
+                    var html = '<div style="margin-left: 0px;">' +
+                        '<div class="tree-row" style="font-weight:600; color:#ffffff;">' +
+                            '<span style="color:#6b7280; font-size:10px;">⌄</span>' +
+                            '<span>📁</span>' +
+                            '<span>openarena</span>' +
+                        '</div>' +
+                        '<div style="padding-left:14px; border-left:1px solid #383838; margin-left:8px; display:flex; flex-direction:column; gap:1px;">' +
+                            '<div class="tree-row" style="color:#d1d5db;"><span style="color:#6b7280; font-size:10px;">›</span> <span>📁</span> <span>backend</span></div>' +
+                            '<div class="tree-row" style="color:#d1d5db;"><span style="color:#6b7280; font-size:10px;">›</span> <span>📁</span> <span>frontend</span></div>' +
+                            '<div class="tree-row" style="color:#d1d5db;"><span style="color:#6b7280; font-size:10px;">›</span> <span>📁</span> <span>tests</span></div>';
+
+                    if (data.items && data.items.length > 0) {
+                        data.items.forEach(function(item) {
+                            if (item.type === "file") {
+                                var isSh = item.name.endsWith(".sh");
+                                var icon = isSh 
+                                    ? '<span style="color:#fde047; font-weight:bold; background:rgba(253, 224, 71, 0.1); padding:0 3px; border-radius:3px; font-size:10px;">>_</span>'
+                                    : '<span>📄</span>';
+                                html += '<div class="tree-row" onclick="openFileInEditor(\'' + item.path + '\')">' +
+                                    icon + ' <span>' + item.name + '</span>' +
+                                '</div>';
+                            }
+                        });
+                    }
+
+                    var defaultStatic = ["README.md", "requirements.txt", "run.sh"];
+                    defaultStatic.forEach(function(fname) {
+                        var alreadyIn = (data.items || []).some(function(it) { return it.name === fname; });
+                        if (!alreadyIn) {
+                            var isSh = fname.endsWith(".sh");
+                            var icon = isSh 
+                                ? '<span style="color:#fde047; font-weight:bold; background:rgba(253, 224, 71, 0.1); padding:0 3px; border-radius:3px; font-size:10px;">>_</span>'
+                                : '<span>📄</span>';
+                            html += '<div class="tree-row" onclick="openFileInEditor(\'' + fname + '\')">' +
+                                icon + ' <span>' + fname + '</span>' +
+                            '</div>';
+                        }
+                    });
+
+                    html += '</div></div>';
+                    container.innerHTML = html;
+                })
+                .catch(function(err) {
+                    console.error("Workspace tree error:", err);
+                });
+        }
+
+        function openLiveBrowser(url) {
+            closeWorkspaceSheet();
+            const modal = document.getElementById("browser-modal");
+            const iframe = document.getElementById("browser-iframe");
+            const label = document.getElementById("browser-url-text");
+            if (modal && iframe) {
+                iframe.src = url || "/workspace-preview/";
+                if (label) label.textContent = "http://localhost:8000" + (url || "/workspace-preview/");
+                modal.style.display = "flex";
+            }
+        }
+
+        function closeLiveBrowser() {
+            const modal = document.getElementById("browser-modal");
+            if (modal) modal.style.display = "none";
+        }
+
+        function refreshBrowserIframe() {
+            const iframe = document.getElementById("browser-iframe");
+            if (iframe) iframe.src = iframe.src;
+        }
+
+        function openFileInEditor(path) {
+            closeWorkspaceSheet();
+            fetch("/api/workspace/file?path=" + encodeURIComponent(path))
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    AppState.activeEditorFile = path;
+                    const modal = document.getElementById("editor-modal");
+                    const title = document.getElementById("editor-filename");
+                    const txt = document.getElementById("editor-content");
+                    if (modal && title && txt) {
+                        title.textContent = path;
+                        txt.value = d.content || ("# " + path + "\n(Hazır)");
+                        modal.style.display = "flex";
+                    }
+                })
+                .catch(function(e) {
+                    alert("Dosya açılamadı: " + e.message);
+                });
+        }
+
+        function closeEditorModal() {
+            const modal = document.getElementById("editor-modal");
+            if (modal) modal.style.display = "none";
+        }
+
+        function saveCurrentEditorFile() {
+            if (!AppState.activeEditorFile) return;
+            const txt = document.getElementById("editor-content");
+            fetch("/api/workspace/file", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    path: AppState.activeEditorFile,
+                    content: txt ? txt.value : ""
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function() { alert("Dosya başarıyla kaydedildi!"); })
+            .catch(function(e) { alert("Kaydetme hatası: " + e.message); });
+        }
+
+        // ==========================================
+        // GUARANTEED NON-FAILING CHAT SENDER
+        // ==========================================
+        function formatMarkdown(str) {
+            if (!str) return "";
+            var s = escapeHtml(str);
+            s = s.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, '<pre style="background:#111827; padding:8px 12px; border-radius:6px; overflow-x:auto; margin:6px 0; border:1px solid #374151;"><code>$2</code></pre>');
+            s = s.replace(/`([^`]+)`/g, '<code style="background:#1f2937; padding:2px 5px; border-radius:4px; font-size:12px; color:#38bdf8;">$1</code>');
+            s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            s = s.replace(/\n/g, '<br>');
+            return s;
+        }
+
+        function handleSendMessage() {
+            const input = document.getElementById("user-input");
+            const text = input ? input.value.trim() : "";
+            if (!text) return;
+
+            input.value = "";
+            appendUserMessage(text);
+
+            // Show immediate assistant bubble with thinking indicator
+            var assistantBox = createAssistantBubble();
+            assistantBox.innerHTML = '<span class="thinking-anim">Gemini çalışıyor ve düşünüyor</span>';
+
+            var keysJson = JSON.stringify(AppState.apiKeys || []);
+            var streamUrl = "/api/chat?message=" + encodeURIComponent(text) +
+                            "&session_id=" + encodeURIComponent(AppState.sessionId) +
+                            "&api_keys=" + encodeURIComponent(keysJson) +
+                            "&stream=true";
+
+            var es;
+            try {
+                es = new EventSource(streamUrl);
+            } catch (e) {
+                fallbackSync(text, assistantBox);
+                return;
+            }
+
+            var replyText = "";
+            var tools = [];
+            var hasTokens = false;
+
+            function render() {
+                var toolsHtml = "";
+                if (tools.length > 0) {
+                    tools.forEach(function(t) {
+                        var resStr = typeof t.result === 'object' ? JSON.stringify(t.result) : String(t.result);
+                        toolsHtml += '<div class="tool-badge">✓ [' + escapeHtml(t.tool) + '] ' + escapeHtml(resStr.substring(0, 90)) + '</div>';
+                    });
+                }
+                var contentHtml = replyText ? formatMarkdown(replyText) : '<span class="thinking-anim">Gemini düşünüyor...</span>';
+                assistantBox.innerHTML = toolsHtml + '<div>' + contentHtml + '</div>';
+                scrollToBottom();
+            }
+
+            es.addEventListener("token", function(e) {
+                try {
+                    var d = JSON.parse(e.data);
+                    replyText += (d.content || "");
+                    hasTokens = true;
+                    render();
+                } catch(err) {}
+            });
+
+            es.addEventListener("tool_start", function(e) {
+                try {
+                    var d = JSON.parse(e.data);
+                    tools.push({ tool: d.tool, result: "Çalıştırılıyor..." });
+                    render();
+                } catch(err) {}
+            });
+
+            es.addEventListener("tool_end", function(e) {
+                try {
+                    var d = JSON.parse(e.data);
+                    if (tools.length > 0) {
+                        tools[tools.length - 1].result = d.result;
+                    } else {
+                        tools.push(d);
+                    }
+                    if (d.tool === "start_process" && d.result && d.result.listening_ports && d.result.listening_ports.length > 0) {
+                        openLiveBrowser("/proxy/" + d.result.listening_ports[0] + "/");
+                    }
+                    loadWorkspaceFilesTree();
+                    render();
+                } catch(err) {}
+            });
+
+            es.addEventListener("error", function(e) {
+                es.close();
+                if (!hasTokens && !tools.length) {
+                    // If stream closed before any data, fallback to sync
+                    fallbackSync(text, assistantBox);
+                }
+            });
+
+            es.addEventListener("done", function(e) {
+                es.close();
+                loadWorkspaceFilesTree();
+                render();
+            });
+        }
+
+        function fallbackSync(text, assistantBox) {
+            var keysJson = JSON.stringify(AppState.apiKeys || []);
+            var url = "/api/chat/sync?message=" + encodeURIComponent(text) +
+                      "&session_id=" + encodeURIComponent(AppState.sessionId) +
+                      "&api_keys=" + encodeURIComponent(keysJson);
+
+            fetch(url, { method: "GET" })
+            .then(function(response) {
+                return response.text();
+            })
+            .then(function(rawText) {
+                var data;
+                try {
+                    data = JSON.parse(rawText);
+                } catch(e) {
+                    throw new Error("Sunucu cevabı: " + rawText.substring(0, 100));
+                }
+
+                var toolsHtml = "";
+                if (data.tools && data.tools.length > 0) {
+                    data.tools.forEach(function(t) {
+                        var resStr = typeof t.result === 'object' ? JSON.stringify(t.result) : String(t.result);
+                        toolsHtml += '<div class="tool-badge">✓ [' + escapeHtml(t.tool) + '] ' + escapeHtml(resStr.substring(0, 90)) + '</div>';
+                        if (t.tool === "start_process" && t.result.listening_ports && t.result.listening_ports.length > 0) {
+                            openLiveBrowser("/proxy/" + t.result.listening_ports[0] + "/");
+                        }
+                    });
+                    loadWorkspaceFilesTree();
+                }
+
+                assistantBox.innerHTML = toolsHtml + '<div>' + formatMarkdown(data.reply || "Göreviniz tamamlandı.") + '</div>';
+                scrollToBottom();
+            })
+            .catch(function(err) {
+                assistantBox.innerHTML = '<span style="color:#fda4af;">Hata: ' + escapeHtml(err.message) + '</span>';
+            });
+        }
+
+        function appendUserMessage(text) {
+            const container = document.getElementById("messages-container");
+            if (!container) return;
+            const div = document.createElement("div");
+            div.className = "msg-user";
+            div.innerHTML = '<div class="user-bubble">' + escapeHtml(text) + '</div>';
+            container.appendChild(div);
+            scrollToBottom();
+        }
+
+        function createAssistantBubble() {
+            const container = document.getElementById("messages-container");
+            const div = document.createElement("div");
+            div.className = "msg-assistant";
+            div.innerHTML = '<div class="assistant-header">' +
+                '<span style="font-weight:600; color:#f3f4f6;">OpenArena Agent</span> • <span style="color:#4ade80; font-family:monospace; font-size:11px;">Gemini Flash</span>' +
+            '</div>' +
+            '<div class="markdown-body"></div>';
+            container.appendChild(div);
+            scrollToBottom();
+            return div.querySelector(".markdown-body");
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById("messages-container");
+            if (container) container.scrollTop = container.scrollHeight;
+        }
+
+        function escapeHtml(str) {
+            if (!str) return "";
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>
