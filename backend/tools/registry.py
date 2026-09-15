@@ -5,6 +5,7 @@ from .file_tools import read_file, write_file, edit_file, list_directory
 from .bash_tools import run_bash
 from .process_tools import process_manager
 from .web_tools import web_search, fetch_page, search_images, download_file, search_music, download_music
+from .beat_tools import generate_beat
 
 TOOL_DEFINITIONS = [
     {
@@ -141,6 +142,35 @@ TOOL_DEFINITIONS = [
                     }
                 },
                 "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "generate_beat",
+            "description": "Generate and synthesize an interactive 808 drum beat or instrumental rhythm track (like Gemini Beat Maker) directly into the workspace as a playable WAV file. Supports genres: 'drill', 'trap', 'boombap', 'lofi', 'synthwave', 'afrobeat', customizable BPM tempo, and bars. The beat can be played live in the interactive drum sequencer or downloaded.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "genre": {
+                        "type": "string",
+                        "description": "Beat genre style: 'drill', 'trap', 'boombap', 'lofi', 'synthwave', or 'afrobeat'."
+                    },
+                    "bpm": {
+                        "type": "integer",
+                        "description": "Tempo in BPM (e.g. 140 for Drill, 135 for Trap, 92 for Boombap, 80 for Lo-Fi, 115 for Synthwave, 105 for Afrobeat)."
+                    },
+                    "bars": {
+                        "type": "integer",
+                        "description": "Number of bars to generate (default 2)."
+                    },
+                    "filename": {
+                        "type": "string",
+                        "description": "Optional output audio filename (e.g. 'drill_beat.wav')."
+                    }
+                },
+                "required": ["genre"]
             }
         }
     },
@@ -377,6 +407,14 @@ def execute_tool(name: str, arguments: Dict[str, Any], workspace_dir: Path) -> D
                 query=arguments.get("query", ""),
                 filename=arguments.get("filename"),
                 base_dir=workspace_dir
+            )
+        elif name == "generate_beat":
+            return generate_beat(
+                genre=arguments.get("genre", "drill"),
+                bpm=arguments.get("bpm"),
+                bars=int(arguments.get("bars", 2)),
+                filename=arguments.get("filename"),
+                workspace_dir=workspace_dir
             )
         elif name == "search_music":
             return search_music(

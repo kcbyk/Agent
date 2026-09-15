@@ -11,6 +11,7 @@ import {
   FileWriteCard,
   MusicCard,
   MediaDownloadCard,
+  BeatMakerCard,
 } from "@/components/ChatCards";
 
 interface ToolEvent {
@@ -236,6 +237,14 @@ export default function Home() {
             {/* Quick Suggestion Chips */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full max-w-lg">
               <button
+                onClick={() => executeSend("Bana 140 BPM karanlık bir Drill beat yap")}
+                className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181b] hover:bg-[#202024] border border-[#27272a] hover:border-zinc-600 text-left transition-all text-xs text-zinc-300 hover:text-white group"
+              >
+                <span className="text-base group-hover:scale-110 transition-transform">🎛️</span>
+                <span className="truncate">140 BPM karanlık Drill beat yap</span>
+              </button>
+
+              <button
                 onClick={() => executeSend("Bana modern ve canlı bir portfolyo web sitesi oluştur")}
                 className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181b] hover:bg-[#202024] border border-[#27272a] hover:border-zinc-600 text-left transition-all text-xs text-zinc-300 hover:text-white group"
               >
@@ -252,19 +261,11 @@ export default function Home() {
               </button>
 
               <button
-                onClick={() => executeSend("İnternetten sevimli bir yavru kedi fotoğrafı bul ve indir")}
+                onClick={() => executeSend("Bana rahatlatıcı 80 BPM bir Lo-Fi hip hop ritmi üret")}
                 className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181b] hover:bg-[#202024] border border-[#27272a] hover:border-zinc-600 text-left transition-all text-xs text-zinc-300 hover:text-white group"
               >
-                <span className="text-base group-hover:scale-110 transition-transform">🖼️</span>
-                <span className="truncate">Sevimli kedi fotoğrafı bul ve indir</span>
-              </button>
-
-              <button
-                onClick={() => executeSend("Python ile bash terminalinde uptime ve disk durumunu göster")}
-                className="flex items-center gap-2.5 p-3 rounded-xl bg-[#18181b] hover:bg-[#202024] border border-[#27272a] hover:border-zinc-600 text-left transition-all text-xs text-zinc-300 hover:text-white group"
-              >
-                <span className="text-base group-hover:scale-110 transition-transform">⚡</span>
-                <span className="truncate">Terminalde sistem durumunu göster</span>
+                <span className="text-base group-hover:scale-110 transition-transform">🎧</span>
+                <span className="truncate">80 BPM Lo-Fi Hip Hop ritmi üret</span>
               </button>
             </div>
           </div>
@@ -326,6 +327,20 @@ export default function Home() {
                               <span className="text-zinc-400 truncate max-w-xs">"{t.args?.query}"</span>
                               {t.isDone && <span className="text-emerald-400 text-[11px] ml-auto">✓</span>}
                             </div>
+                          );
+                        } else if (t.tool === "generate_beat" && t.result?.status === "success") {
+                          return (
+                            <BeatMakerCard
+                              key={t.callId}
+                              genre={t.result.genre}
+                              bpm={t.result.bpm}
+                              bars={t.result.bars}
+                              pattern={t.result.pattern}
+                              filename={t.result.filename}
+                              previewUrl={t.result.preview_url}
+                              downloadUrl={t.result.download_url}
+                              onOpenStudio={openStudio}
+                            />
                           );
                         } else if (t.tool === "download_music" && t.result?.status === "success") {
                           return (
