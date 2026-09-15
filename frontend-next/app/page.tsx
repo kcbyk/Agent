@@ -297,6 +297,7 @@ export default function Home() {
                               output={t.result?.stdout || t.result?.stderr || ""}
                               exitCode={t.result?.exit_code}
                               isLive={!t.isDone}
+                              durationMs={t.result?.duration_ms}
                             />
                           );
                         } else if (t.tool === "write_file" || t.tool === "edit_file") {
@@ -307,6 +308,24 @@ export default function Home() {
                               content={t.args?.content || t.args?.new_text || ""}
                               onOpenStudio={openStudio}
                             />
+                          );
+                        } else if (t.tool === "read_file") {
+                          return (
+                            <div key={t.callId} className="flex items-center gap-2 text-xs text-zinc-400 py-0.5 px-1 font-mono">
+                              <span className="text-zinc-500 font-bold">&gt;</span>
+                              <span className="text-zinc-300 font-medium">Read</span>
+                              <span className="text-zinc-500 truncate max-w-xs">{t.args?.path}</span>
+                              {t.isDone && <span className="text-emerald-400 text-[11px] ml-auto">✓</span>}
+                            </div>
+                          );
+                        } else if (t.tool === "web_search") {
+                          return (
+                            <div key={t.callId} className="flex items-center gap-2 text-xs text-zinc-400 py-0.5 px-1 font-mono">
+                              <span className="text-zinc-500 font-bold">&gt;</span>
+                              <span className="text-sky-400 font-medium">Search</span>
+                              <span className="text-zinc-400 truncate max-w-xs">"{t.args?.query}"</span>
+                              {t.isDone && <span className="text-emerald-400 text-[11px] ml-auto">✓</span>}
+                            </div>
                           );
                         } else if (t.tool === "download_music" && t.result?.status === "success") {
                           return (

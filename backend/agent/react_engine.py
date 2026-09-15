@@ -149,6 +149,7 @@ class ReActAgentEngine:
                         return
 
                     loop = asyncio.get_event_loop()
+                    t_tool_start = time.time()
                     try:
                         result = await loop.run_in_executor(
                             None,
@@ -160,11 +161,13 @@ class ReActAgentEngine:
                     except Exception as e:
                         result = {"error": f"Tool execution failed: {str(e)}"}
 
+                    duration_ms = int((time.time() - t_tool_start) * 1000)
                     session.add_tool_response(call_id, tool_name, result)
 
                     yield self._sse("tool_end", {
                         "call_id": call_id,
                         "tool": tool_name,
+                        "duration_ms": duration_ms,
                         "result": result
                     })
 
