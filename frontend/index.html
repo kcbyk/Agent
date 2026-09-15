@@ -478,6 +478,142 @@
             z-index: 60;
             display: none;
             flex-direction: column;
+            animation: modalFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: scale(0.985); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        /* MODAL BACK BUTTON & NAVIGATION */
+        .modal-back-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+            padding: 6px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            transition: all 0.15s;
+        }
+        .modal-back-btn:hover, .modal-back-btn:active {
+            background: rgba(255, 255, 255, 0.18);
+            border-color: rgba(255, 255, 255, 0.28);
+            transform: translateX(-2px);
+        }
+
+        /* SEGMENTED CONTROL TABS */
+        .segmented-control {
+            display: inline-flex;
+            background: #18181b;
+            border: 1px solid #27272a;
+            border-radius: 8px;
+            padding: 3px;
+            gap: 2px;
+        }
+        .seg-btn {
+            background: transparent;
+            border: none;
+            color: #a1a1aa;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s;
+        }
+        .seg-btn:hover {
+            color: #f4f4f5;
+        }
+        .seg-btn.active {
+            background: #27272a;
+            color: #ffffff;
+            font-weight: 600;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        /* CODE EDITOR WITH GUTTER */
+        .editor-container {
+            display: flex;
+            flex: 1;
+            height: 100%;
+            overflow: hidden;
+            background: #09090b;
+        }
+        .editor-gutter {
+            width: 48px;
+            background: #121214;
+            border-right: 1px solid #27272a;
+            color: #52525b;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12.5px;
+            line-height: 1.55;
+            padding: 16px 8px 16px 0;
+            text-align: right;
+            user-select: none;
+            overflow: hidden;
+            white-space: pre;
+        }
+        .editor-textarea {
+            flex: 1;
+            background: #09090b;
+            color: #f4f4f5;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12.5px;
+            line-height: 1.55;
+            padding: 16px;
+            border: none;
+            resize: none;
+            outline: none;
+            white-space: pre;
+            overflow: auto;
+            tab-size: 4;
+        }
+
+        /* PREVIEW VIEWPORT WRAPPER */
+        .preview-viewport-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #18181b;
+            overflow: hidden;
+            position: relative;
+        }
+        .preview-viewport-wrapper.desktop iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #ffffff;
+        }
+        .preview-viewport-wrapper.mobile {
+            padding: 16px 0;
+            background: #09090b;
+        }
+        .preview-viewport-wrapper.mobile .phone-frame {
+            width: 390px;
+            height: 100%;
+            max-height: 844px;
+            border: 10px solid #27272a;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7);
+            background: #ffffff;
+            display: flex;
+            flex-direction: column;
+        }
+        .preview-viewport-wrapper.mobile iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #ffffff;
         }
     </style>
 </head>
@@ -519,7 +655,7 @@
 
 Terminali (`bash`), dosya yönetimini (`write_file`, `edit_file`) ve sunucu süreçlerini (`start_process`) doğrudan yönetebiliyorum. 
 
-Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfolyo web sayfası yap ve canlıya aç"</i> veya <i>"Hava durumu CLI aracı yaz ve terminalde çalıştır"</i>).</div>
+Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir kripto takip landing page'i yap ve canlıya aç"</i>).</div>
         </div>
     </div>
 
@@ -571,7 +707,7 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                     <span style="font-size: 10px; font-family: monospace; background: rgba(74, 222, 128, 0.15); color: #4ade80; border: 1px solid rgba(74, 222, 128, 0.3); padding: 2px 6px; border-radius: 6px;">gemini-3.5-flash-lite</span>
                 </div>
                 <p style="font-size: 12px; color: var(--text-muted); line-height: 1.45;">
-                    API anahtarınız doğrulandı. Çoklu yedek zinciri (Fallback) ve araç çağırma (Tool-calling) devrede.
+                    API anahtarınız devrede. Otonom kodlama, dosya oluşturma ve terminal çalıştırma yetenekleri açık.
                 </p>
             </div>
         </div>
@@ -623,29 +759,61 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
         </div>
     </div>
 
-    <!-- 3. CANLI ÖNİZLEME TARAYICI MODALI -->
-    <div id="browser-modal" class="full-modal">
-        <div style="height: 50px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 14px;">
-            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                <button class="header-btn" onclick="refreshBrowserIframe()" title="Sayfayı Yenile">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-                        <path d="M3 3v5h5"/>
+    <!-- 3. UNIFIED STUDIO FILE VIEWER & PREVIEW MODAL -->
+    <div id="file-viewer-modal" class="full-modal">
+        <!-- TOP TOOLBAR -->
+        <div style="height: 52px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; gap: 8px;">
+            <!-- SOL: GERİ DÖN BUTONU VE DOSYA BİLGİSİ -->
+            <div style="display: flex; align-items: center; gap: 10px; overflow: hidden; flex: 1;">
+                <button class="modal-back-btn" onclick="handleModalBack()" title="Geri Dön (ESC veya Telefonun Geri Tuşu)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5"/>
+                        <path d="m12 19-7-7 7-7"/>
                     </svg>
+                    <span>Geri</span>
                 </button>
-                <div style="flex: 1; background: var(--bg-main); border: 1px solid var(--border-color); border-radius: 6px; padding: 5px 10px; font-family: monospace; font-size: 11px; color: #4ade80; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
-                    <span id="browser-url-text">http://localhost:8000/workspace-preview/</span>
+                <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+                    <span id="viewer-file-icon" style="font-size: 16px;">📄</span>
+                    <span id="viewer-file-name" style="font-weight: 600; color: #ffffff; font-size: 13.5px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">index.html</span>
+                    <span id="viewer-file-size" style="color: #71717a; font-size: 11px; font-family: monospace; background: #27272a; padding: 1px 6px; border-radius: 4px;"></span>
                 </div>
             </div>
-            <div style="display: flex; align-items: center; gap: 6px;">
-                <a id="browser-external-link" href="#" target="_blank" class="header-btn" title="Yeni Sekmede Aç" style="text-decoration:none;">
+
+            <!-- ORTA: GÖRÜNÜM SEKMELERİ (Önizleme / Kod) -->
+            <div id="viewer-tabs-container" style="display: flex; align-items: center; margin: 0 6px;">
+                <div class="segmented-control">
+                    <button id="tab-btn-preview" class="seg-btn active" onclick="switchViewerTab('preview')">
+                        <span>🌐</span> Canlı Önizleme
+                    </button>
+                    <button id="tab-btn-code" class="seg-btn" onclick="switchViewerTab('code')">
+                        <span>💻</span> Kod / Düzenle
+                    </button>
+                </div>
+            </div>
+
+            <!-- SAĞ: AKSİYONLAR -->
+            <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+                <!-- Viewport Modu (Masaüstü / Mobil) -->
+                <div id="viewport-toggle-container" class="segmented-control">
+                    <button id="btn-vp-desktop" class="seg-btn active" onclick="setViewportMode('desktop')" title="Masaüstü Görünümü">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                    </button>
+                    <button id="btn-vp-mobile" class="seg-btn" onclick="setViewportMode('mobile')" title="Mobil Telefon Çerçevesi">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="20" x="5" y="2" rx="2"/><path d="M12 18h.01"/></svg>
+                    </button>
+                </div>
+
+                <button id="btn-save-code" class="header-btn" style="background: var(--color-indigo); color: #ffffff; padding: 6px 14px; font-weight: 500; display: none;" onclick="saveViewerFile()">
+                    <span>💾</span> Kaydet
+                </button>
+                <a id="viewer-open-external" href="#" target="_blank" class="header-btn" title="Yeni Sekmede Aç" style="text-decoration:none;">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
                         <polyline points="15 3 21 3 21 9"/>
                         <line x1="10" y1="14" x2="21" y2="3"/>
                     </svg>
                 </a>
-                <button class="header-btn" onclick="closeLiveBrowser()">
+                <button class="header-btn" onclick="handleModalBack()" title="Kapat">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 6 6 18"/>
                         <path d="m6 6 12 12"/>
@@ -653,30 +821,35 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                 </button>
             </div>
         </div>
-        <div style="flex: 1; background: #ffffff;">
-            <iframe id="browser-iframe" style="width: 100%; height: 100%; border: none;" src="about:blank"></iframe>
-        </div>
-    </div>
 
-    <!-- 4. DOSYA KOD EDİTÖRÜ MODALI -->
-    <div id="editor-modal" class="full-modal">
-        <div style="height: 50px; background: var(--bg-panel); border-bottom: 1px solid var(--border-color); display: flex; align-items: center; justify-content: space-between; padding: 0 16px;">
-            <div style="display: flex; align-items: center; gap: 8px; font-family: monospace; font-size: 13px;">
-                <span>📄</span>
-                <span id="editor-filename" style="font-weight: 600; color: #f4f4f5;">dosya.txt</span>
-            </div>
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <button onclick="saveCurrentEditorFile()" style="background: var(--color-indigo); border: none; color: #ffffff; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 500; cursor: pointer;">Kaydet</button>
-                <button class="header-btn" onclick="closeEditorModal()">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M18 6 6 18"/>
-                        <path d="m6 6 12 12"/>
-                    </svg>
-                </button>
+        <!-- PANEL 1: CANLI WEB / HTML ÖNİZLEME -->
+        <div id="viewer-pane-preview" class="preview-viewport-wrapper desktop" style="flex: 1; display: flex;">
+            <div class="phone-frame">
+                <iframe id="viewer-preview-iframe" style="width: 100%; height: 100%; border: none;" src="about:blank"></iframe>
             </div>
         </div>
-        <div style="flex: 1; background: #09090b;">
-            <textarea id="editor-content" style="width: 100%; height: 100%; background: #09090b; color: #f4f4f5; font-family: ui-monospace, monospace; font-size: 13px; padding: 16px; border: none; resize: none; outline: none; line-height: 1.55;" spellcheck="false"></textarea>
+
+        <!-- PANEL 2: KOD EDİTÖRÜ (SATIR NUMARALI) -->
+        <div id="viewer-pane-code" style="flex: 1; display: none; flex-direction: column;">
+            <div class="editor-container">
+                <div id="editor-gutter" class="editor-gutter">1</div>
+                <textarea id="viewer-code-textarea" class="editor-textarea" spellcheck="false" placeholder="Dosya içeriği..."></textarea>
+            </div>
+            <!-- STATUS BAR -->
+            <div style="height: 28px; background: #121214; border-top: 1px solid #27272a; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; font-family: monospace; font-size: 11px; color: #71717a;">
+                <span id="editor-status-cursor">Satır 1, Sütun 1</span>
+                <span id="editor-status-chars">0 karakter</span>
+            </div>
+        </div>
+
+        <!-- PANEL 3: MARKDOWN ÖNİZLEME -->
+        <div id="viewer-pane-markdown" style="flex: 1; display: none; overflow-y: auto; padding: 24px 32px; background: #121214;">
+            <div id="markdown-rendered-view" class="markdown-body" style="max-width: 800px; margin: 0 auto;"></div>
+        </div>
+
+        <!-- PANEL 4: GÖRSEL ÖNİZLEME -->
+        <div id="viewer-pane-image" style="flex: 1; display: none; align-items: center; justify-content: center; background: #09090b; padding: 20px;">
+            <img id="viewer-image-tag" src="" style="max-width: 90%; max-height: 90%; object-fit: contain; border-radius: 8px; box-shadow: 0 8px 30px rgba(0,0,0,0.5);">
         </div>
     </div>
 
@@ -684,7 +857,10 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
     <script>
         const AppState = {
             sessionId: "arena_" + Math.random().toString(36).substring(2, 9),
-            activeEditorFile: null
+            activeViewerPath: null,
+            activeViewerTab: "preview",
+            viewportMode: "desktop",
+            cachedFileContent: ""
         };
 
         document.addEventListener("DOMContentLoaded", function() {
@@ -699,7 +875,51 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                     }
                 });
             }
+
+            // Code Editor gutter line numbers & status bar sync
+            const codeArea = document.getElementById("viewer-code-textarea");
+            const gutter = document.getElementById("editor-gutter");
+            if (codeArea && gutter) {
+                codeArea.addEventListener("scroll", function() {
+                    gutter.scrollTop = codeArea.scrollTop;
+                });
+                codeArea.addEventListener("input", function() {
+                    updateEditorLineNumbers();
+                    updateEditorStatus();
+                });
+                codeArea.addEventListener("click", updateEditorStatus);
+                codeArea.addEventListener("keyup", updateEditorStatus);
+            }
         });
+
+        // ==========================================
+        // HARDWARE / PHONE BACK BUTTON NAVIGATION
+        // ==========================================
+        window.addEventListener("popstate", function(event) {
+            closeViewerModal();
+            closeWorkspaceSheet();
+            closeLeftSidebar();
+        });
+
+        document.addEventListener("keydown", function(e) {
+            if (e.key === "Escape") {
+                handleModalBack();
+            }
+        });
+
+        function handleModalBack() {
+            const viewerModal = document.getElementById("file-viewer-modal");
+            if (viewerModal && viewerModal.style.display === "flex") {
+                if (history.state && history.state.modalOpen) {
+                    history.back();
+                } else {
+                    closeViewerModal();
+                }
+                return;
+            }
+            closeWorkspaceSheet();
+            closeLeftSidebar();
+        }
 
         function openLeftSidebar() {
             document.getElementById("left-sidebar-backdrop").style.display = "block";
@@ -744,6 +964,8 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                     return '<span style="color:#4ade80; font-size:14px;">⌨️</span>';
                 case 'md': case 'txt':
                     return '<span style="color:#94a3b8; font-size:14px;">📄</span>';
+                case 'png': case 'jpg': case 'jpeg': case 'svg': case 'webp':
+                    return '<span style="color:#ec4899; font-size:14px;">🖼️</span>';
                 default:
                     return '<span style="color:#94a3b8; font-size:14px;">📄</span>';
             }
@@ -757,6 +979,245 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
             return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
         }
 
+        // ==========================================
+        // UNIFIED FILE STUDIO VIEWER / CODE EDITOR
+        // ==========================================
+        function openFileViewer(path, targetTab) {
+            closeWorkspaceSheet();
+            AppState.activeViewerPath = path;
+
+            // Push history state so browser/phone back button closes modal smoothly
+            if (!history.state || !history.state.modalOpen) {
+                history.pushState({ modalOpen: true, path: path }, "");
+            }
+
+            const modal = document.getElementById("file-viewer-modal");
+            const iconEl = document.getElementById("viewer-file-icon");
+            const nameEl = document.getElementById("viewer-file-name");
+            const sizeEl = document.getElementById("viewer-file-size");
+            const extLink = document.getElementById("viewer-open-external");
+
+            nameEl.textContent = path;
+            iconEl.innerHTML = getFileIcon(path);
+
+            var ext = path.split('.').pop().toLowerCase();
+            var isHtml = (ext === 'html' || ext === 'htm');
+            var isMarkdown = (ext === 'md');
+            var isImage = ['png', 'jpg', 'jpeg', 'svg', 'gif', 'webp'].includes(ext);
+
+            // Configure tabs display
+            const tabsContainer = document.getElementById("viewer-tabs-container");
+            const tabPreview = document.getElementById("tab-btn-preview");
+            const tabCode = document.getElementById("tab-btn-code");
+            const vpToggle = document.getElementById("viewport-toggle-container");
+            const btnSave = document.getElementById("btn-save-code");
+
+            if (isHtml) {
+                tabsContainer.style.display = "flex";
+                tabPreview.style.display = "flex";
+                tabPreview.innerHTML = "<span>🌐</span> Canlı Önizleme";
+                tabCode.innerHTML = "<span>💻</span> Kod / Düzenle";
+                vpToggle.style.display = "inline-flex";
+            } else if (isMarkdown) {
+                tabsContainer.style.display = "flex";
+                tabPreview.style.display = "flex";
+                tabPreview.innerHTML = "<span>👁️</span> Önizleme";
+                tabCode.innerHTML = "<span>📝</span> Kaynak Kod";
+                vpToggle.style.display = "none";
+            } else if (isImage) {
+                tabsContainer.style.display = "none";
+                vpToggle.style.display = "none";
+            } else {
+                tabsContainer.style.display = "none";
+                vpToggle.style.display = "none";
+            }
+
+            var chosenTab = targetTab || (isHtml ? "preview" : (isMarkdown ? "preview" : (isImage ? "image" : "code")));
+
+            // Fetch file content
+            fetch("/api/workspace/file?path=" + encodeURIComponent(path))
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    var content = d.content || "";
+                    AppState.cachedFileContent = content;
+
+                    sizeEl.textContent = formatBytes(content.length);
+
+                    const codeArea = document.getElementById("viewer-code-textarea");
+                    codeArea.value = content;
+                    updateEditorLineNumbers();
+                    updateEditorStatus();
+
+                    // If HTML, set iframe src to rendered preview
+                    if (isHtml) {
+                        var previewUrl = "/workspace-preview/" + encodeURIComponent(path);
+                        document.getElementById("viewer-preview-iframe").src = previewUrl;
+                        extLink.href = previewUrl;
+                    } else {
+                        extLink.href = "/api/workspace/file?path=" + encodeURIComponent(path);
+                    }
+
+                    // If Markdown, render typography
+                    if (isMarkdown) {
+                        document.getElementById("markdown-rendered-view").innerHTML = formatMarkdown(content);
+                    }
+
+                    // If Image
+                    if (isImage) {
+                        document.getElementById("viewer-image-tag").src = "/workspace-preview/" + encodeURIComponent(path);
+                    }
+
+                    switchViewerTab(chosenTab);
+                    modal.style.display = "flex";
+                })
+                .catch(function(err) {
+                    alert("Dosya yüklenemedi: " + err.message);
+                });
+        }
+
+        function switchViewerTab(tabName) {
+            AppState.activeViewerTab = tabName;
+
+            const panePreview = document.getElementById("viewer-pane-preview");
+            const paneCode = document.getElementById("viewer-pane-code");
+            const paneMd = document.getElementById("viewer-pane-markdown");
+            const paneImg = document.getElementById("viewer-pane-image");
+
+            const tabBtnPreview = document.getElementById("tab-btn-preview");
+            const tabBtnCode = document.getElementById("tab-btn-code");
+            const btnSave = document.getElementById("btn-save-code");
+            const vpToggle = document.getElementById("viewport-toggle-container");
+
+            panePreview.style.display = "none";
+            paneCode.style.display = "none";
+            paneMd.style.display = "none";
+            paneImg.style.display = "none";
+
+            tabBtnPreview.classList.remove("active");
+            tabBtnCode.classList.remove("active");
+            btnSave.style.display = "none";
+
+            var ext = (AppState.activeViewerPath || "").split('.').pop().toLowerCase();
+            var isHtml = (ext === 'html' || ext === 'htm');
+            var isMarkdown = (ext === 'md');
+
+            if (tabName === "preview") {
+                tabBtnPreview.classList.add("active");
+                if (isMarkdown) {
+                    paneMd.style.display = "block";
+                    vpToggle.style.display = "none";
+                } else {
+                    panePreview.style.display = "flex";
+                    if (isHtml) vpToggle.style.display = "inline-flex";
+                }
+            } else if (tabName === "code") {
+                tabBtnCode.classList.add("active");
+                paneCode.style.display = "flex";
+                btnSave.style.display = "inline-flex";
+                vpToggle.style.display = "none";
+                updateEditorLineNumbers();
+            } else if (tabName === "image") {
+                paneImg.style.display = "flex";
+                vpToggle.style.display = "none";
+            }
+        }
+
+        function setViewportMode(mode) {
+            AppState.viewportMode = mode;
+            const wrapper = document.getElementById("viewer-pane-preview");
+            const btnDesk = document.getElementById("btn-vp-desktop");
+            const btnMob = document.getElementById("btn-vp-mobile");
+
+            wrapper.classList.remove("desktop", "mobile");
+            btnDesk.classList.remove("active");
+            btnMob.classList.remove("active");
+
+            if (mode === "mobile") {
+                wrapper.classList.add("mobile");
+                btnMob.classList.add("active");
+            } else {
+                wrapper.classList.add("desktop");
+                btnDesk.classList.add("active");
+            }
+        }
+
+        function closeViewerModal() {
+            const modal = document.getElementById("file-viewer-modal");
+            if (modal) modal.style.display = "none";
+            const iframe = document.getElementById("viewer-preview-iframe");
+            if (iframe) iframe.src = "about:blank";
+            AppState.activeViewerPath = null;
+        }
+
+        function saveViewerFile() {
+            if (!AppState.activeViewerPath) return;
+            const codeArea = document.getElementById("viewer-code-textarea");
+            const saveBtn = document.getElementById("btn-save-code");
+
+            saveBtn.innerHTML = "<span>⏳</span> Kaydediliyor...";
+
+            fetch("/api/workspace/file", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    path: AppState.activeViewerPath,
+                    content: codeArea ? codeArea.value : ""
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function() {
+                saveBtn.innerHTML = "<span>✓</span> Kaydedildi!";
+                saveBtn.style.background = "#15803d";
+                setTimeout(function() {
+                    saveBtn.innerHTML = "<span>💾</span> Kaydet";
+                    saveBtn.style.background = "var(--color-indigo)";
+                }, 2000);
+
+                // Refresh preview iframe if it is an HTML file
+                var ext = AppState.activeViewerPath.split('.').pop().toLowerCase();
+                if (ext === 'html' || ext === 'htm') {
+                    const iframe = document.getElementById("viewer-preview-iframe");
+                    if (iframe) iframe.src = iframe.src;
+                }
+                loadWorkspaceFilesTree();
+            })
+            .catch(function(err) {
+                alert("Kaydetme hatası: " + err.message);
+                saveBtn.innerHTML = "<span>💾</span> Kaydet";
+            });
+        }
+
+        function updateEditorLineNumbers() {
+            const txt = document.getElementById("viewer-code-textarea");
+            const gutter = document.getElementById("editor-gutter");
+            if (!txt || !gutter) return;
+            const lines = txt.value.split("\n").length;
+            let numbers = "";
+            for (let i = 1; i <= lines; i++) {
+                numbers += i + "\n";
+            }
+            gutter.innerText = numbers;
+        }
+
+        function updateEditorStatus() {
+            const txt = document.getElementById("viewer-code-textarea");
+            const cursorStatus = document.getElementById("editor-status-cursor");
+            const charsStatus = document.getElementById("editor-status-chars");
+            if (!txt || !cursorStatus || !charsStatus) return;
+
+            const val = txt.value;
+            const selStart = txt.selectionStart;
+            const lines = val.substring(0, selStart).split("\n");
+            const lineNum = lines.length;
+            const colNum = lines[lines.length - 1].length + 1;
+
+            cursorStatus.textContent = "Satır " + lineNum + ", Sütun " + colNum;
+            charsStatus.textContent = val.length + " karakter";
+        }
+
+        // ==========================================
+        // WORKSPACE DOSYALAR & PROCESSES LOADER
+        // ==========================================
         function loadWorkspaceFilesTree() {
             Promise.all([
                 fetch("/api/workspace/files?recursive=true").then(function(r) { return r.json(); }).catch(function() { return { items: [] }; }),
@@ -765,20 +1226,20 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                 var fileData = results[0];
                 var processes = results[1] || [];
                 var items = fileData.items || [];
-                
+
                 var visibleFiles = items.filter(function(i) {
                     return i.type === "file" && !i.name.startsWith(".git");
                 });
-                
+
                 var totalBytes = visibleFiles.reduce(function(acc, it) { return acc + (it.size || 0); }, 0);
                 var diskUsage = document.getElementById("ws-disk-usage");
                 var fileUsage = document.getElementById("ws-files-count");
                 var wsBtnBadge = document.getElementById("ws-badge-count");
-                
+
                 if (diskUsage) diskUsage.textContent = formatBytes(totalBytes) + " / 128 MB";
                 if (fileUsage) fileUsage.textContent = visibleFiles.length + " dosya";
                 if (wsBtnBadge) wsBtnBadge.textContent = visibleFiles.length > 0 ? visibleFiles.length : "";
-                
+
                 // RENDER PROCESSES
                 var procContainer = document.getElementById("processes-list-container");
                 if (procContainer) {
@@ -789,13 +1250,13 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                             var portLabel = ports.length > 0 ? (":" + ports.join(", ")) : "Arka Plan";
                             procHtml += `
                                 <div class="process-pill" style="margin: 0 0 8px 0;">
-                                    <div style="display:flex; align-items:center; gap:8px; overflow:hidden;" onclick="openLiveBrowser('/proxy/${ports[0] || 8000}/')">
+                                    <div style="display:flex; align-items:center; gap:8px; overflow:hidden; cursor:pointer;" onclick="openFileViewer('/proxy/${ports[0] || 8000}/', 'preview')">
                                         <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#4ade80; box-shadow:0 0 8px #4ade80;"></span>
                                         <span style="color:#ffffff; font-weight:600; font-size:13px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(p.name || p.command)}</span>
                                         <span style="color:#86efac; font-family:monospace; font-size:11px; background:rgba(74,222,128,0.15); padding:2px 6px; border-radius:4px;">${portLabel}</span>
                                     </div>
                                     <div style="display:flex; align-items:center; gap:6px;">
-                                        ${ports.length > 0 ? `<button class="header-btn" style="color:#4ade80; font-size:11px; padding:3px 8px; background:rgba(74,222,128,0.1); border-radius:6px;" onclick="openLiveBrowser('/proxy/${ports[0]}/')">Canlı Aç</button>` : ''}
+                                        ${ports.length > 0 ? `<button class="header-btn" style="color:#4ade80; font-size:11px; padding:3px 8px; background:rgba(74,222,128,0.1); border-radius:6px;" onclick="openFileViewer('/proxy/${ports[0]}/', 'preview')">Canlı Aç</button>` : ''}
                                         <button class="header-btn" style="color:#fda4af; font-size:11px; padding:3px 6px;" onclick="stopWorkspaceProcess('${p.process_id}')" title="Durdur">⏹️</button>
                                     </div>
                                 </div>
@@ -805,7 +1266,7 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                         var hasIndexHtml = visibleFiles.some(function(f) { return f.name === "index.html"; });
                         if (hasIndexHtml) {
                             procHtml = `
-                                <div class="process-pill" style="margin: 0 0 8px 0; background:rgba(56, 189, 248, 0.08); border-color:rgba(56, 189, 248, 0.25);" onclick="openLiveBrowser('/workspace-preview/index.html')">
+                                <div class="process-pill" style="margin: 0 0 8px 0; background:rgba(56, 189, 248, 0.08); border-color:rgba(56, 189, 248, 0.25); cursor:pointer;" onclick="openFileViewer('index.html', 'preview')">
                                     <div style="display:flex; align-items:center; gap:8px;">
                                         <span style="font-size:14px;">🌐</span>
                                         <span style="color:#38bdf8; font-weight:500; font-size:13px;">index.html (Canlı Web)</span>
@@ -819,7 +1280,7 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                     }
                     procContainer.innerHTML = procHtml;
                 }
-                
+
                 // RENDER FILES
                 var fileTreeContainer = document.getElementById("file-tree-container");
                 if (fileTreeContainer) {
@@ -827,23 +1288,23 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                         fileTreeContainer.innerHTML = `<div style="font-size:12px; color:#71717a; padding:12px; text-align:center;">Henüz dosya oluşturulmadı. Yapay zekaya bir sayfa veya script yapmasını söyleyin!</div>`;
                         return;
                     }
-                    
+
                     var filesHtml = '<div style="display:flex; flex-direction:column; gap:6px;">';
                     visibleFiles.forEach(function(item) {
                         var isHtml = item.name.endsWith(".html");
                         var icon = getFileIcon(item.name);
                         var sizeStr = formatBytes(item.size);
-                        
+
                         filesHtml += `
                             <div style="display:flex; align-items:center; justify-content:space-between; padding:8px 12px; background:#1c1c1f; border-radius:8px; border:1px solid #27272a;">
-                                <div style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1; overflow:hidden;" onclick="openFileInEditor('${escapeHtml(item.path)}')">
+                                <div style="display:flex; align-items:center; gap:10px; cursor:pointer; flex:1; overflow:hidden;" onclick="openFileViewer('${escapeHtml(item.path)}')">
                                     ${icon}
                                     <span style="font-weight:500; color:#f4f4f5; font-size:13px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escapeHtml(item.name)}</span>
                                     <span style="font-size:11px; color:#71717a; font-family:monospace;">${sizeStr}</span>
                                 </div>
                                 <div style="display:flex; align-items:center; gap:6px;">
-                                    ${isHtml ? `<button class="header-btn" style="color:#4ade80; font-size:11px; padding:3px 8px; background:rgba(74,222,128,0.1); border-radius:6px;" onclick="openLiveBrowser('/workspace-preview/${escapeHtml(item.path)}')">🌐 Canlı Aç</button>` : ''}
-                                    <button class="header-btn" style="color:#a1a1aa; font-size:11px; padding:3px 8px; background:#27272a; border-radius:6px;" onclick="openFileInEditor('${escapeHtml(item.path)}')">✏️ Düzenle</button>
+                                    ${isHtml ? `<button class="header-btn" style="color:#4ade80; font-size:11px; padding:3px 8px; background:rgba(74,222,128,0.1); border-radius:6px;" onclick="openFileViewer('${escapeHtml(item.path)}', 'preview')">🌐 Canlı Aç</button>` : ''}
+                                    <button class="header-btn" style="color:#a1a1aa; font-size:11px; padding:3px 8px; background:#27272a; border-radius:6px;" onclick="openFileViewer('${escapeHtml(item.path)}', 'code')">✏️ Düzenle</button>
                                 </div>
                             </div>
                         `;
@@ -862,75 +1323,6 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
             }).then(function() {
                 loadWorkspaceFilesTree();
             });
-        }
-
-        function openLiveBrowser(url) {
-            closeWorkspaceSheet();
-            const modal = document.getElementById("browser-modal");
-            const iframe = document.getElementById("browser-iframe");
-            const label = document.getElementById("browser-url-text");
-            const extLink = document.getElementById("browser-external-link");
-            if (modal && iframe) {
-                var fullUrl = url || "/workspace-preview/";
-                iframe.src = fullUrl;
-                if (label) label.textContent = window.location.origin + fullUrl;
-                if (extLink) extLink.href = fullUrl;
-                modal.style.display = "flex";
-            }
-        }
-
-        function closeLiveBrowser() {
-            const modal = document.getElementById("browser-modal");
-            if (modal) modal.style.display = "none";
-        }
-
-        function refreshBrowserIframe() {
-            const iframe = document.getElementById("browser-iframe");
-            if (iframe) iframe.src = iframe.src;
-        }
-
-        function openFileInEditor(path) {
-            closeWorkspaceSheet();
-            fetch("/api/workspace/file?path=" + encodeURIComponent(path))
-                .then(function(r) { return r.json(); })
-                .then(function(d) {
-                    AppState.activeEditorFile = path;
-                    const modal = document.getElementById("editor-modal");
-                    const title = document.getElementById("editor-filename");
-                    const txt = document.getElementById("editor-content");
-                    if (modal && title && txt) {
-                        title.textContent = path;
-                        txt.value = d.content || "";
-                        modal.style.display = "flex";
-                    }
-                })
-                .catch(function(e) {
-                    alert("Dosya açılamadı: " + e.message);
-                });
-        }
-
-        function closeEditorModal() {
-            const modal = document.getElementById("editor-modal");
-            if (modal) modal.style.display = "none";
-        }
-
-        function saveCurrentEditorFile() {
-            if (!AppState.activeEditorFile) return;
-            const txt = document.getElementById("editor-content");
-            fetch("/api/workspace/file", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    path: AppState.activeEditorFile,
-                    content: txt ? txt.value : ""
-                })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function() {
-                alert("Dosya başarıyla kaydedildi!");
-                loadWorkspaceFilesTree();
-            })
-            .catch(function(e) { alert("Kaydetme hatası: " + e.message); });
         }
 
         function toggleCardBody(callId) {
@@ -1179,10 +1571,10 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                             body.innerHTML = `
                                 <div style="font-size:12px; color:#a1a1aa; margin-bottom:8px;">${escapeHtml(res.message || "Dosya başarıyla yazıldı.")}</div>
                                 <div style="display:flex; gap:8px; flex-wrap:wrap;">
-                                    <button class="tool-action-btn" onclick="openFileInEditor('${escapeHtml(filePath)}')">
+                                    <button class="tool-action-btn" onclick="openFileViewer('${escapeHtml(filePath)}', 'code')">
                                         <span>👁️</span> Dosyayı Aç / İncele
                                     </button>
-                                    ${isHtml ? `<button class="tool-action-btn" style="color:#4ade80; border-color:#22c55e;" onclick="openLiveBrowser('/workspace-preview/${escapeHtml(filePath)}')"><span>🌐</span> Canlı Web Önizle</button>` : ''}
+                                    ${isHtml ? `<button class="tool-action-btn" style="color:#4ade80; border-color:#22c55e;" onclick="openFileViewer('${escapeHtml(filePath)}', 'preview')"><span>🌐</span> Canlı Web Önizle</button>` : ''}
                                 </div>
                             `;
                         }
@@ -1195,12 +1587,12 @@ Aşağıya yapmak istediğiniz görevi yazın (örn: <i>"Bana modern bir portfol
                                     <div style="font-size:12px; color:#86efac; margin-bottom:8px;">
                                         Sunucu aktif olarak <strong>Port ${ports[0]}</strong> üzerinde dinliyor.
                                     </div>
-                                    <button class="tool-action-btn" style="background:#166534; color:#ffffff; border-color:#22c55e; padding:6px 14px; font-weight:bold;" onclick="openLiveBrowser('/proxy/${ports[0]}/')">
+                                    <button class="tool-action-btn" style="background:#166534; color:#ffffff; border-color:#22c55e; padding:6px 14px; font-weight:bold;" onclick="openFileViewer('/proxy/${ports[0]}/', 'preview')">
                                         <span>🌐</span> Canlı Önizlemeyi Aç (Port ${ports[0]})
                                     </button>
                                 `;
                                 setTimeout(function() {
-                                    openLiveBrowser('/proxy/' + ports[0] + '/');
+                                    openFileViewer('/proxy/' + ports[0] + '/', 'preview');
                                 }, 600);
                             } else {
                                 body.innerHTML = `<div style="font-size:12px; color:#a1a1aa;">Süreç başlatıldı.</div>`;
