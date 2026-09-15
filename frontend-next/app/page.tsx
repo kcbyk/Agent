@@ -1,0 +1,413 @@
+"use client";
+
+import React, { useState, useEffect, useRef } from "react";
+import { Send, Square, Sparkles } from "lucide-react";
+import Header from "@/components/Header";
+import Sidebar from "@/components/Sidebar";
+import WorkspaceSheet, { WorkspaceItem, ProcessItem } from "@/components/WorkspaceSheet";
+import StudioModal from "@/components/StudioModal";
+import {
+  TerminalCard,
+  FileWriteCard,
+  MusicCard,
+  MediaDownloadCard,
+} from "@/components/ChatCards";
+
+interface ToolEvent {
+  callId: string;
+  tool: string;
+  args: any;
+  result?: any;
+  isDone?: boolean;
+}
+
+interface Message {
+  id: string;
+  role: "user" | "assistant";
+  text: string;
+  tools?: ToolEvent[];
+}
+
+export default function Home() {
+  const [sessionId, setSessionId] = useState("");
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Modals / Drawers
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
+  const [studioPath, setStudioPath] = useState<string | null>(null);
+  const [studioTab, setStudioTab] = useState<"preview" | "code" | "image" | "audio">("preview");
+
+  // Data
+  const [workspaceItems, setWorkspaceItems] = useState<WorkspaceItem[]>([]);
+  const [processes, setProcesses] = useState<ProcessItem[]>([]);
+
+  const activeEventSourceRef = useRef<EventSource | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Initialize
+  useEffect(() => {
+    setSessionId("arena_" + Math.random().toString(36).substring(2, 9));
+    loadWorkspace();
+
+    // Initial greeting
+    setMessages([
+      {
+        id: "msg_init",
+        role: "assistant",
+        text: "👋 Merhaba! OpenArena Agent OS hazır.\n\nTerminali (`bash`), dosya ve kod üretimini (`write_file`), yüksek hızlı MP3 indirmeyi (`download_music`) ve canlı sunucu süreçlerini yönetebilirim. Ne yapmak istersiniz?",
+      },
+    ]);
+
+    // Handle ESC and browser back button
+    const handlePopState = () => {
+      setStudioPath(null);
+      setIsWorkspaceOpen(false);
+      setIsSidebarOpen(false);
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isGenerating]);
+
+  const loadWorkspace = async () => {
+    try {
+      const [filesRes, procRes] = await Promise.all([
+        fetch("/api/workspace/files?recursive=true").then((r) => r.json()),
+        fetch("/api/processes").then((r) => r.json()).catch(() => []),
+      ]);
+      setWorkspaceItems(filesRes.items || []);
+      setProcesses(procRes || []);
+    } catch (err) {}
+  };
+
+  const handleStop = async () => {
+    if (activeEventSourceRef.current) {
+      activeEventSourceRef.current.close();
+      activeEventSourceRef.current = null;
+    }
+    try {
+      await fetch(`/api/chat/stop?session_id=${encodeURIComponent(sessionId)}`);
+    } catch (e) {}
+    setIsGenerating(false);
+    loadWorkspace();
+  };
+
+  const handleSend = () => {
+    const trimmed = input.trim();
+    if (!trimmed || isGenerating) return;
+
+    setInput("");
+    const userMsgId = "user_" + Date.now();
+    const assistantMsgId = "asst_" + Date.now();
+
+    setMessages((prev) => [
+      ...prev,
+      { id: userMsgId, role: "user", text: trimmed },
+      { id: assistantMsgId, role: "assistant", text: "", tools: [] },
+    ]);
+
+    setIsGenerating(true);
+
+    const streamUrl = `/api/chat?message=${encodeURIComponent(
+      trimmed
+    )}&session_id=${encodeURIComponent(sessionId)}`;
+
+    const es = new EventSource(streamUrl);
+    activeEventSourceRef.current = es;
+
+    es.addEventListener("tool_start", (e: any) => {
+      try {
+        const d = JSON.parse(e.data);
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== assistantMsgId) return m;
+            const existing = m.tools || [];
+            return {
+              ...m,
+              tools: [
+                ...existing,
+                { callId: d.call_id, tool: d.tool, args: d.arguments, isDone: false },
+              ],
+            };
+          })
+        );
+      } catch (err) {}
+    });
+
+    es.addEventListener("tool_end", (e: any) => {
+      try {
+        const d = JSON.parse(e.data);
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== assistantMsgId) return m;
+            const updatedTools = (m.tools || []).map((t) =>
+              t.callId === d.call_id ? { ...t, result: d.result, isDone: true } : t
+            );
+            return { ...m, tools: updatedTools };
+          })
+        );
+        loadWorkspace();
+      } catch (err) {}
+    });
+
+    es.addEventListener("token", (e: any) => {
+      try {
+        const d = JSON.parse(e.data);
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== assistantMsgId) return m;
+            return { ...m, text: m.text + (d.content || "") };
+          })
+        );
+      } catch (err) {}
+    });
+
+    es.addEventListener("done", () => {
+      es.close();
+      activeEventSourceRef.current = null;
+      setIsGenerating(false);
+      loadWorkspace();
+    });
+
+    es.addEventListener("cancelled", () => {
+      es.close();
+      activeEventSourceRef.current = null;
+      setIsGenerating(false);
+      loadWorkspace();
+    });
+
+    es.addEventListener("error", () => {
+      es.close();
+      activeEventSourceRef.current = null;
+      setIsGenerating(false);
+      loadWorkspace();
+    });
+  };
+
+  const openStudio = (path: string, mode: "preview" | "code" | "image" | "audio" = "preview") => {
+    if (!history.state || !history.state.studioOpen) {
+      history.pushState({ studioOpen: true }, "");
+    }
+    setStudioPath(path);
+    setStudioTab(mode);
+    setIsWorkspaceOpen(false);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col h-full bg-[#121214] overflow-hidden relative">
+      {/* Header */}
+      <Header
+        onOpenSidebar={() => {
+          if (!history.state || !history.state.sidebarOpen) {
+            history.pushState({ sidebarOpen: true }, "");
+          }
+          setIsSidebarOpen(true);
+        }}
+        onOpenWorkspace={() => {
+          if (!history.state || !history.state.workspaceOpen) {
+            history.pushState({ workspaceOpen: true }, "");
+          }
+          loadWorkspace();
+          setIsWorkspaceOpen(true);
+        }}
+        fileCount={workspaceItems.filter((i) => i.type === "file").length}
+      />
+
+      {/* Messages Scroll Area */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 max-w-3xl w-full mx-auto space-y-6 pb-36">
+        {messages.map((msg) => (
+          <div key={msg.id} className="space-y-2">
+            {msg.role === "user" ? (
+              <div className="flex justify-end">
+                <div className="bg-[#27272a] text-white px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm leading-relaxed shadow">
+                  {msg.text}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-xs text-zinc-400">
+                  <span className="font-semibold text-zinc-200">OpenArena Agent</span>
+                  <span>•</span>
+                  <span className="text-emerald-400 font-mono text-[11px]">Gemini 3.5</span>
+                </div>
+
+                {/* Tool Cards */}
+                {msg.tools && msg.tools.length > 0 && (
+                  <div className="space-y-2">
+                    {msg.tools.map((t) => {
+                      if (t.tool === "bash") {
+                        return (
+                          <TerminalCard
+                            key={t.callId}
+                            command={t.args?.command || ""}
+                            output={t.result?.stdout || t.result?.stderr || ""}
+                            exitCode={t.result?.exit_code}
+                            isLive={!t.isDone}
+                          />
+                        );
+                      } else if (t.tool === "write_file" || t.tool === "edit_file") {
+                        return (
+                          <FileWriteCard
+                            key={t.callId}
+                            path={t.args?.path || ""}
+                            content={t.args?.content || t.args?.new_text || ""}
+                            onOpenStudio={openStudio}
+                          />
+                        );
+                      } else if (t.tool === "download_music" && t.result?.status === "success") {
+                        return (
+                          <MusicCard
+                            key={t.callId}
+                            title={t.result.title}
+                            filename={t.result.filename}
+                            channel={t.result.channel}
+                            duration={t.result.duration}
+                            sizeHuman={t.result.size_human}
+                            coverUrl={t.result.cover_url}
+                            previewUrl={t.result.preview_url}
+                            downloadUrl={t.result.download_url}
+                            onOpenStudio={openStudio}
+                          />
+                        );
+                      } else if (t.tool === "download_file" && t.result?.status === "success") {
+                        return (
+                          <MediaDownloadCard
+                            key={t.callId}
+                            filename={t.result.filename}
+                            sizeHuman={t.result.size_human}
+                            isImage={t.result.is_image}
+                            previewUrl={t.result.preview_url}
+                            downloadUrl={t.result.download_url}
+                            onOpenStudio={openStudio}
+                          />
+                        );
+                      } else {
+                        return (
+                          <div
+                            key={t.callId}
+                            className="bg-[#18181b] border border-[#27272a] rounded-xl p-3 text-xs font-mono text-zinc-400"
+                          >
+                            <div className="flex items-center gap-2 font-semibold text-purple-400 mb-1">
+                              <span>⚙️</span>
+                              <span>{t.tool}</span>
+                              {!t.isDone && <span className="text-amber-400">⏳</span>}
+                            </div>
+                            <pre className="text-[11px] overflow-auto max-h-40">
+                              {JSON.stringify(t.result || t.args, null, 2)}
+                            </pre>
+                          </div>
+                        );
+                      }
+                    })}
+                  </div>
+                )}
+
+                {/* Assistant Text */}
+                {msg.text && (
+                  <div className="bg-[#18181b] border border-[#27272a] rounded-2xl p-4 text-sm text-zinc-200 leading-relaxed whitespace-pre-wrap shadow-sm">
+                    {msg.text}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Box Footer */}
+      <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-gradient-to-t from-[#121214] via-[#121214]/90 to-transparent z-20 flex justify-center">
+        <div className="w-full max-w-3xl bg-[#18181b] border border-[#27272a] rounded-2xl shadow-2xl overflow-hidden focus-within:border-zinc-500 transition-colors">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            placeholder="Yapay zekaya ne yaptırmak istiyorsunuz? (Enter ile gönder)"
+            rows={2}
+            className="w-full bg-transparent p-3 sm:p-4 text-sm text-white placeholder-zinc-500 outline-none resize-none leading-relaxed"
+          />
+
+          <div className="px-3 pb-2.5 flex items-center justify-between">
+            <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 font-mono">
+              <span className="w-2 h-2 rounded-full bg-emerald-400" />
+              <span>ReAct Autonomous Agent</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {isGenerating ? (
+                <button
+                  onClick={handleStop}
+                  className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-500 text-white flex items-center justify-center shadow-lg shadow-red-600/40 pulsing-stop"
+                  title="Durdur (⏹️)"
+                >
+                  <Square className="w-3.5 h-3.5 fill-white" />
+                </button>
+              ) : (
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim()}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${
+                    input.trim()
+                      ? "bg-white text-black hover:scale-105 active:scale-95"
+                      : "bg-zinc-800 text-zinc-600 cursor-not-allowed"
+                  }`}
+                  title="Gönder"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Left Sidebar */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        onNewChat={() => {
+          setSessionId("arena_" + Math.random().toString(36).substring(2, 9));
+          setMessages([]);
+        }}
+      />
+
+      {/* Workspace Sheet */}
+      <WorkspaceSheet
+        isOpen={isWorkspaceOpen}
+        onClose={() => setIsWorkspaceOpen(false)}
+        items={workspaceItems}
+        processes={processes}
+        onRefresh={loadWorkspace}
+        onOpenFile={openStudio}
+        onStopProcess={async (pid) => {
+          await fetch("/api/processes/stop", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ process_id: pid }),
+          });
+          loadWorkspace();
+        }}
+      />
+
+      {/* Studio / Preview Modal */}
+      <StudioModal
+        path={studioPath}
+        targetTab={studioTab}
+        onClose={() => setStudioPath(null)}
+        onRefreshWorkspace={loadWorkspace}
+      />
+    </div>
+  );
+}
